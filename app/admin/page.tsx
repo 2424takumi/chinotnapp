@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Worker, Part, Operation } from '@/lib/types/database';
+import { getWorkerColorByName } from '@/lib/utils/colors';
 
 interface WorkLogDetail {
   log_id: string;
@@ -304,7 +305,10 @@ export default function AdminLogsPage() {
                       <span className="text-gray-600">作業日:</span> {log.work_date}
                     </div>
                     <div>
-                      <span className="text-gray-600">作業者:</span> {log.worker_name}
+                      <span className="text-gray-600">作業者:</span>{' '}
+                      <span style={{ color: getWorkerColorByName(log.worker_name), fontWeight: '600' }}>
+                        {log.worker_name}
+                      </span>
                     </div>
                     <div>
                       <span className="text-gray-600">作業時間:</span> {log.duration_minutes}分
@@ -381,7 +385,11 @@ export default function AdminLogsPage() {
                             minute: '2-digit',
                           })}
                         </td>
-                        <td className="px-4 py-3">{log.worker_name}</td>
+                        <td className="px-4 py-3">
+                          <span style={{ color: getWorkerColorByName(log.worker_name), fontWeight: '600' }}>
+                            {log.worker_name}
+                          </span>
+                        </td>
                         <td className="px-4 py-3">{log.part_name}</td>
                         <td className="px-4 py-3">{log.operation_name}</td>
                         <td className="px-4 py-3 text-right">{log.duration_minutes}</td>

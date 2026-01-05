@@ -55,7 +55,7 @@ export default function AdminLayout({
       </nav>
 
       {/* コンテンツ */}
-      <main className="max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
+      <main className="max-w-7xl mx-auto px-2 md:px-4 py-4 md:py-8 overflow-x-hidden">
         {children}
       </main>
     </div>

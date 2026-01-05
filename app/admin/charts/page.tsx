@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getWorkerColorByName } from '@/lib/utils/colors';
 import {
   BarChart,
   Bar,
@@ -359,11 +360,11 @@ export default function ChartsPage() {
                         <th className="border border-gray-300 px-2 md:px-4 py-2 md:py-3 text-left font-bold text-gray-700">
                           工程
                         </th>
-                        {latestDaySummary.workers.map((worker, idx) => (
+                        {latestDaySummary.workers.map((worker) => (
                           <th
                             key={worker}
                             className="border border-gray-300 px-2 md:px-4 py-2 md:py-3 text-center font-bold"
-                            style={{ color: COLORS[idx % COLORS.length] }}
+                            style={{ color: getWorkerColorByName(worker) }}
                           >
                             {worker}
                           </th>
@@ -506,7 +507,11 @@ export default function ChartsPage() {
                     <tr>
                       <th className="border px-2 md:px-4 py-2 text-left">工程</th>
                       {productivityMatrix.workers.map((worker) => (
-                        <th key={worker} className="border px-2 md:px-4 py-2 text-center">
+                        <th
+                          key={worker}
+                          className="border px-2 md:px-4 py-2 text-center font-bold"
+                          style={{ color: getWorkerColorByName(worker) }}
+                        >
                           {worker}
                         </th>
                       ))}
@@ -559,8 +564,8 @@ export default function ChartsPage() {
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  {averageTime.workers.map((worker, idx) => (
-                    <Bar key={worker} dataKey={worker} fill={COLORS[idx % COLORS.length]} />
+                  {averageTime.workers.map((worker) => (
+                    <Bar key={worker} dataKey={worker} fill={getWorkerColorByName(worker)} />
                   ))}
                 </BarChart>
               </ResponsiveContainer>

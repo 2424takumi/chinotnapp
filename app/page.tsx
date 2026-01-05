@@ -173,7 +173,7 @@ export default function Home() {
   const getSelectedPartName = () => parts.find(p => p.part_id === selectedPart)?.name || '';
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-20">
+    <main className="min-h-screen bg-gray-50 pb-20 overflow-x-hidden">
       {/* ヘッダー */}
       <div className="bg-blue-600 text-white p-4 shadow-md">
         <div className="flex items-center justify-between">
@@ -306,7 +306,8 @@ export default function Home() {
               type="date"
               value={workDate}
               onChange={(e) => setWorkDate(e.target.value)}
-              className="w-full p-3 border-2 border-gray-300 rounded-lg"
+              className="w-full max-w-full p-3 border-2 border-gray-300 rounded-lg text-base"
+              style={{ fontSize: '16px' }}
             />
           </div>
 

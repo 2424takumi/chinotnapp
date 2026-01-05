@@ -292,7 +292,7 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="p-0 md:p-8">
       <div className="mb-4 md:mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-gray-800">工程別在庫状況</h1>
         <p className="text-xs md:text-sm text-gray-600 mt-2">
@@ -303,8 +303,8 @@ export default function InventoryPage() {
       <div className="space-y-6">
         {/* 胴グループ */}
         {inventory.some(p => p.part_name.startsWith('胴')) && (
-          <div className="bg-gray-100 rounded-lg p-4 md:p-6 shadow-sm">
-            <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">【胴】</h2>
+          <div className="bg-gray-100 rounded-lg p-3 md:p-6 shadow-sm">
+            <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">【胴】</h2>
 
             {inventory.filter(p => p.part_name.startsWith('胴')).map((partData) => (
               <div key={partData.part_id} className="mb-6 last:mb-0">
@@ -360,7 +360,7 @@ export default function InventoryPage() {
         {inventory.filter(p => !p.part_name.startsWith('胴')).map((partData) => (
             <div
               key={partData.part_id}
-              className="bg-gray-100 rounded-lg p-4 md:p-6 shadow-sm"
+              className="bg-gray-100 rounded-lg p-3 md:p-6 shadow-sm"
             >
               {/* 部品名ヘッダーと在庫追加ボタン */}
               <div className="flex items-center justify-between mb-4">
