@@ -292,10 +292,10 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">工程別在庫状況</h1>
-        <p className="text-sm text-gray-600 mt-2">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-800">工程別在庫状況</h1>
+        <p className="text-xs md:text-sm text-gray-600 mt-2">
           各部品の工程ごとの在庫数を表示しています（在庫0の工程は非表示）
         </p>
       </div>
@@ -303,8 +303,8 @@ export default function InventoryPage() {
       <div className="space-y-6">
         {/* 胴グループ */}
         {inventory.some(p => p.part_name.startsWith('胴')) && (
-          <div className="bg-gray-100 rounded-lg p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">【胴】</h2>
+          <div className="bg-gray-100 rounded-lg p-4 md:p-6 shadow-sm">
+            <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">【胴】</h2>
 
             {inventory.filter(p => p.part_name.startsWith('胴')).map((partData) => (
               <div key={partData.part_id} className="mb-6 last:mb-0">
@@ -360,16 +360,16 @@ export default function InventoryPage() {
         {inventory.filter(p => !p.part_name.startsWith('胴')).map((partData) => (
             <div
               key={partData.part_id}
-              className="bg-gray-100 rounded-lg p-6 shadow-sm"
+              className="bg-gray-100 rounded-lg p-4 md:p-6 shadow-sm"
             >
               {/* 部品名ヘッダーと在庫追加ボタン */}
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-800">
+                <h2 className="text-lg md:text-xl font-bold text-gray-800">
                   【{partData.part_name}】
                 </h2>
                 <button
                   onClick={() => openModal(partData.part_id)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                  className="bg-blue-600 text-white px-3 py-2 md:px-4 rounded-lg text-xs md:text-sm font-medium hover:bg-blue-700 transition-colors"
                 >
                   + 在庫追加
                 </button>

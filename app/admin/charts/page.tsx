@@ -324,7 +324,7 @@ export default function ChartsPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">生産分析グラフ</h2>
+      <h2 className="text-xl md:text-2xl font-bold">生産分析グラフ</h2>
 
       {loading ? (
         <div className="text-center py-12">
@@ -337,38 +337,38 @@ export default function ChartsPage() {
       ) : (
         <div className="space-y-6">
           {/* 最新日の生産実績サマリー */}
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-lg shadow-lg">
-            <h3 className="text-2xl font-bold mb-4">📊 最新の生産実績 ({latestDaySummary.date})</h3>
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 md:p-6 rounded-lg shadow-lg">
+            <h3 className="text-lg md:text-2xl font-bold mb-4">📊 最新の生産実績 ({latestDaySummary.date})</h3>
 
             {latestDaySummary.chartData.length === 0 ? (
               <p className="text-blue-100">データがありません</p>
             ) : (
               <>
                 {/* 工程別×作業者別の表 */}
-                <div className="bg-white rounded-lg p-4 overflow-x-auto">
-                  <h4 className="text-gray-800 font-bold mb-3">
+                <div className="bg-white rounded-lg p-3 md:p-4 overflow-x-auto">
+                  <h4 className="text-gray-800 font-bold mb-3 text-sm md:text-base">
                     工程別の生産数（作業者別） -
                     総作業時間: {formatTime(latestDaySummary.totalTime)} /
                     良品率: {latestDaySummary.totalQty > 0
                       ? ((latestDaySummary.totalGood / latestDaySummary.totalQty) * 100).toFixed(1)
                       : 0}%
                   </h4>
-                  <table className="w-full text-sm border-collapse">
+                  <table className="w-full text-xs md:text-sm border-collapse">
                     <thead className="bg-gray-100">
                       <tr>
-                        <th className="border border-gray-300 px-4 py-3 text-left font-bold text-gray-700">
+                        <th className="border border-gray-300 px-2 md:px-4 py-2 md:py-3 text-left font-bold text-gray-700">
                           工程
                         </th>
                         {latestDaySummary.workers.map((worker, idx) => (
                           <th
                             key={worker}
-                            className="border border-gray-300 px-4 py-3 text-center font-bold"
+                            className="border border-gray-300 px-2 md:px-4 py-2 md:py-3 text-center font-bold"
                             style={{ color: COLORS[idx % COLORS.length] }}
                           >
                             {worker}
                           </th>
                         ))}
-                        <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 bg-gray-50">
+                        <th className="border border-gray-300 px-2 md:px-4 py-2 md:py-3 text-center font-bold text-gray-700 bg-gray-50">
                           合計
                         </th>
                       </tr>
@@ -381,7 +381,7 @@ export default function ChartsPage() {
                         );
                         return (
                           <tr key={idx} className="hover:bg-gray-50">
-                            <td className="border border-gray-300 px-4 py-3 font-medium text-gray-800">
+                            <td className="border border-gray-300 px-2 md:px-4 py-2 md:py-3 font-medium text-gray-800">
                               {row.operation}
                             </td>
                             {latestDaySummary.workers.map((worker) => {
@@ -389,13 +389,13 @@ export default function ChartsPage() {
                               return (
                                 <td
                                   key={worker}
-                                  className="border border-gray-300 px-4 py-3 text-center text-lg font-semibold text-gray-800"
+                                  className="border border-gray-300 px-2 md:px-4 py-2 md:py-3 text-center text-sm md:text-lg font-semibold text-gray-800"
                                 >
                                   {value}個
                                 </td>
                               );
                             })}
-                            <td className="border border-gray-300 px-4 py-3 text-center text-lg font-bold bg-gray-50 text-gray-800">
+                            <td className="border border-gray-300 px-2 md:px-4 py-2 md:py-3 text-center text-sm md:text-lg font-bold bg-gray-50 text-gray-800">
                               {total}個
                             </td>
                           </tr>
@@ -464,19 +464,19 @@ export default function ChartsPage() {
           </div>
 
           {/* グラフ1: 工程ごとの日別生産数 */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-bold mb-2">工程ごとの日別生産数</h3>
-            <p className="text-sm text-gray-600 mb-4">
+          <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+            <h3 className="text-base md:text-lg font-bold mb-2">工程ごとの日別生産数</h3>
+            <p className="text-xs md:text-sm text-gray-600 mb-4">
               各工程の日々の進捗を確認。ボトルネック工程の特定に活用
             </p>
             {dailyProduction.chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={350}>
+              <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={dailyProduction.chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
+                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
                   {dailyProduction.operations.map((op, idx) => (
                     <Line
                       key={op}
@@ -494,19 +494,19 @@ export default function ChartsPage() {
           </div>
 
           {/* グラフ2: 人別×工程別の生産性 */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-bold mb-2">人別×工程別の生産性（分/良品）</h3>
-            <p className="text-sm text-gray-600 mb-4">
+          <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+            <h3 className="text-base md:text-lg font-bold mb-2">人別×工程別の生産性（分/良品）</h3>
+            <p className="text-xs md:text-sm text-gray-600 mb-4">
               誰がどの工程が得意か。数値が小さいほど生産性が高い
             </p>
             {productivityMatrix.tableData.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm border-collapse">
+                <table className="w-full text-xs md:text-sm border-collapse">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="border px-4 py-2 text-left">工程</th>
+                      <th className="border px-2 md:px-4 py-2 text-left">工程</th>
                       {productivityMatrix.workers.map((worker) => (
-                        <th key={worker} className="border px-4 py-2 text-center">
+                        <th key={worker} className="border px-2 md:px-4 py-2 text-center">
                           {worker}
                         </th>
                       ))}
@@ -515,7 +515,7 @@ export default function ChartsPage() {
                   <tbody>
                     {productivityMatrix.tableData.map((row, idx) => (
                       <tr key={idx} className="hover:bg-gray-50">
-                        <td className="border px-4 py-2 font-medium">{row.operation}</td>
+                        <td className="border px-2 md:px-4 py-2 font-medium">{row.operation}</td>
                         {productivityMatrix.workers.map((worker) => {
                           const value = row[worker];
                           const isNumeric = value !== '—';
@@ -529,7 +529,7 @@ export default function ChartsPage() {
                           return (
                             <td
                               key={worker}
-                              className={`border px-4 py-2 text-center ${bgColor}`}
+                              className={`border px-2 md:px-4 py-2 text-center ${bgColor}`}
                             >
                               {value}
                             </td>
@@ -546,19 +546,19 @@ export default function ChartsPage() {
           </div>
 
           {/* グラフ3: 工程別の平均作業時間 */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-bold mb-2">工程別の平均作業時間（分/個）</h3>
-            <p className="text-sm text-gray-600 mb-4">
+          <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+            <h3 className="text-base md:text-lg font-bold mb-2">工程別の平均作業時間（分/個）</h3>
+            <p className="text-xs md:text-sm text-gray-600 mb-4">
               全体平均と人別の比較。納期予測・工数見積もりに活用
             </p>
             {averageTime.chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={400}>
+              <ResponsiveContainer width="100%" height={350}>
                 <BarChart data={averageTime.chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="operation" angle={-45} textAnchor="end" height={120} />
-                  <YAxis />
+                  <XAxis dataKey="operation" angle={-45} textAnchor="end" height={120} tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
                   {averageTime.workers.map((worker, idx) => (
                     <Bar key={worker} dataKey={worker} fill={COLORS[idx % COLORS.length]} />
                   ))}
@@ -570,19 +570,19 @@ export default function ChartsPage() {
           </div>
 
           {/* グラフ4: 工程別のロス率 */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-bold mb-2">工程別のロス率（%）</h3>
-            <p className="text-sm text-gray-600 mb-4">
+          <div className="bg-white p-4 md:p-6 rounded-lg shadow">
+            <h3 className="text-base md:text-lg font-bold mb-2">工程別のロス率（%）</h3>
+            <p className="text-xs md:text-sm text-gray-600 mb-4">
               どの工程でロスが多いか。品質改善の優先順位決定に活用
             </p>
             {lossRate.length > 0 ? (
-              <ResponsiveContainer width="100%" height={400}>
+              <ResponsiveContainer width="100%" height={350}>
                 <BarChart data={lossRate} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="operation" type="category" width={150} />
+                  <XAxis type="number" tick={{ fontSize: 12 }} />
+                  <YAxis dataKey="operation" type="category" width={120} tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
                   <Bar dataKey="lossRate" name="ロス率（%）">
                     {lossRate.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={getLossRateColor(entry.lossRateNum)} />

@@ -177,11 +177,11 @@ export default function AdminLogsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">実績一覧</h2>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h2 className="text-xl md:text-2xl font-bold">実績一覧</h2>
         <button
           onClick={handleExportCSV}
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+          className="bg-green-600 text-white px-3 py-2 md:px-4 text-sm md:text-base rounded hover:bg-green-700"
         >
           CSV出力
         </button>
@@ -270,80 +270,146 @@ export default function AdminLogsPage() {
         </div>
       </div>
 
-      {/* ログ一覧テーブル */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center">読み込み中...</div>
-        ) : logs.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">データがありません</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-4 py-3 text-left">作業日</th>
-                  <th className="px-4 py-3 text-left">記録日時</th>
-                  <th className="px-4 py-3 text-left">作業者</th>
-                  <th className="px-4 py-3 text-left">部品</th>
-                  <th className="px-4 py-3 text-left">工程</th>
-                  <th className="px-4 py-3 text-right">作業時間(分)</th>
-                  <th className="px-4 py-3 text-right">数量</th>
-                  <th className="px-4 py-3 text-right">ロス数</th>
-                  <th className="px-4 py-3 text-right">良品数</th>
-                  <th className="px-4 py-3 text-right">分/個</th>
-                  <th className="px-4 py-3 text-right">分/良品</th>
-                  <th className="px-4 py-3 text-left">備考</th>
-                  <th className="px-4 py-3 text-center">操作</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {logs.map((log) => {
-                  const goodQty = log.quantity - log.loss_quantity;
-                  const minPerPiece = (log.duration_minutes / log.quantity).toFixed(2);
-                  const minPerGood = goodQty > 0 ? (log.duration_minutes / goodQty).toFixed(2) : '—';
+      {/* ログ一覧 */}
+      {loading ? (
+        <div className="bg-white rounded-lg shadow p-8 text-center">読み込み中...</div>
+      ) : logs.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">データがありません</div>
+      ) : (
+        <>
+          {/* スマホ表示：カード形式 */}
+          <div className="md:hidden space-y-4">
+            {logs.map((log) => {
+              const goodQty = log.quantity - log.loss_quantity;
+              const minPerPiece = (log.duration_minutes / log.quantity).toFixed(2);
+              const minPerGood = goodQty > 0 ? (log.duration_minutes / goodQty).toFixed(2) : '—';
 
-                  return (
-                    <tr key={log.log_id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {log.work_date}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {new Date(log.created_at).toLocaleString('ja-JP', {
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </td>
-                      <td className="px-4 py-3">{log.worker_name}</td>
-                      <td className="px-4 py-3">{log.part_name}</td>
-                      <td className="px-4 py-3">{log.operation_name}</td>
-                      <td className="px-4 py-3 text-right">{log.duration_minutes}</td>
-                      <td className="px-4 py-3 text-right">{log.quantity}</td>
-                      <td className="px-4 py-3 text-right">{log.loss_quantity}</td>
-                      <td className="px-4 py-3 text-right">{goodQty}</td>
-                      <td className="px-4 py-3 text-right">{minPerPiece}</td>
-                      <td className="px-4 py-3 text-right">{minPerGood}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {log.note || '—'}
-                      </td>
-                      <td className="px-4 py-3 text-center whitespace-nowrap">
-                        <button
-                          onClick={() => handleDelete(log.log_id)}
-                          className="text-red-600 hover:text-red-800 text-sm"
-                        >
-                          削除
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+              return (
+                <div key={log.log_id} className="bg-white rounded-lg shadow p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <div className="font-bold text-lg text-blue-600">{log.part_name}</div>
+                      <div className="text-sm text-gray-600">{log.operation_name}</div>
+                    </div>
+                    <button
+                      onClick={() => handleDelete(log.log_id)}
+                      className="text-red-600 hover:text-red-800 text-sm px-3 py-1 border border-red-600 rounded"
+                    >
+                      削除
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-sm mb-2">
+                    <div>
+                      <span className="text-gray-600">作業日:</span> {log.work_date}
+                    </div>
+                    <div>
+                      <span className="text-gray-600">作業者:</span> {log.worker_name}
+                    </div>
+                    <div>
+                      <span className="text-gray-600">作業時間:</span> {log.duration_minutes}分
+                    </div>
+                    <div>
+                      <span className="text-gray-600">数量:</span> {log.quantity}個
+                    </div>
+                    <div>
+                      <span className="text-gray-600">ロス数:</span> {log.loss_quantity}個
+                    </div>
+                    <div>
+                      <span className="text-gray-600">良品数:</span> {goodQty}個
+                    </div>
+                    <div>
+                      <span className="text-gray-600">分/個:</span> {minPerPiece}
+                    </div>
+                    <div>
+                      <span className="text-gray-600">分/良品:</span> {minPerGood}
+                    </div>
+                  </div>
+
+                  {log.note && (
+                    <div className="text-sm text-gray-600 mt-2 pt-2 border-t">
+                      <span className="font-medium">備考:</span> {log.note}
+                    </div>
+                  )}
+
+                  <div className="text-xs text-gray-400 mt-2">
+                    記録: {new Date(log.created_at).toLocaleString('ja-JP')}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
-      </div>
+
+          {/* PC表示：テーブル形式 */}
+          <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="px-4 py-3 text-left">作業日</th>
+                    <th className="px-4 py-3 text-left">記録日時</th>
+                    <th className="px-4 py-3 text-left">作業者</th>
+                    <th className="px-4 py-3 text-left">部品</th>
+                    <th className="px-4 py-3 text-left">工程</th>
+                    <th className="px-4 py-3 text-right">作業時間(分)</th>
+                    <th className="px-4 py-3 text-right">数量</th>
+                    <th className="px-4 py-3 text-right">ロス数</th>
+                    <th className="px-4 py-3 text-right">良品数</th>
+                    <th className="px-4 py-3 text-right">分/個</th>
+                    <th className="px-4 py-3 text-right">分/良品</th>
+                    <th className="px-4 py-3 text-left">備考</th>
+                    <th className="px-4 py-3 text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {logs.map((log) => {
+                    const goodQty = log.quantity - log.loss_quantity;
+                    const minPerPiece = (log.duration_minutes / log.quantity).toFixed(2);
+                    const minPerGood = goodQty > 0 ? (log.duration_minutes / goodQty).toFixed(2) : '—';
+
+                    return (
+                      <tr key={log.log_id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {log.work_date}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {new Date(log.created_at).toLocaleString('ja-JP', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </td>
+                        <td className="px-4 py-3">{log.worker_name}</td>
+                        <td className="px-4 py-3">{log.part_name}</td>
+                        <td className="px-4 py-3">{log.operation_name}</td>
+                        <td className="px-4 py-3 text-right">{log.duration_minutes}</td>
+                        <td className="px-4 py-3 text-right">{log.quantity}</td>
+                        <td className="px-4 py-3 text-right">{log.loss_quantity}</td>
+                        <td className="px-4 py-3 text-right">{goodQty}</td>
+                        <td className="px-4 py-3 text-right">{minPerPiece}</td>
+                        <td className="px-4 py-3 text-right">{minPerGood}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {log.note || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-center whitespace-nowrap">
+                          <button
+                            onClick={() => handleDelete(log.log_id)}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            削除
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="text-sm text-gray-600">
         全{logs.length}件
