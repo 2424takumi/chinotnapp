@@ -293,7 +293,7 @@ export default function InventoryPage() {
 
   return (
     <div className="p-0 md:p-8">
-      <div className="mb-4 md:mb-6">
+      <div className="mb-4 md:mb-6 px-4 md:px-0">
         <h1 className="text-xl md:text-2xl font-bold text-gray-800">工程別在庫状況</h1>
         <p className="text-xs md:text-sm text-gray-600 mt-2">
           各部品の工程ごとの在庫数を表示しています（在庫0の工程は非表示）
