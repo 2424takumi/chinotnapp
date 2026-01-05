@@ -408,6 +408,7 @@ function OperationsTab() {
   const [orderIndex, setOrderIndex] = useState('0');
   const [category, setCategory] = useState('');
   const [active, setActive] = useState(true);
+  const [selectedPartFilter, setSelectedPartFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchParts();
@@ -488,6 +489,16 @@ function OperationsTab() {
 
   const getPartName = (partId: string) => {
     return parts.find((p) => p.part_id === partId)?.name || '';
+  };
+
+  // フィルタリングされた工程リスト
+  const filteredOperations = selectedPartFilter === 'all'
+    ? operations
+    : operations.filter((op) => op.part_id === selectedPartFilter);
+
+  // 部品ごとの工程数を計算
+  const getOperationCountByPart = (partId: string) => {
+    return operations.filter((op) => op.part_id === partId).length;
   };
 
   return (
@@ -581,6 +592,35 @@ function OperationsTab() {
         </form>
       </div>
 
+      {/* 部品フィルタタブ */}
+      <div className="bg-white border-b">
+        <div className="flex overflow-x-auto">
+          <button
+            onClick={() => setSelectedPartFilter('all')}
+            className={`py-3 px-4 border-b-2 text-sm font-medium whitespace-nowrap ${
+              selectedPartFilter === 'all'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-700 hover:text-gray-900 hover:border-gray-300'
+            }`}
+          >
+            すべて ({operations.length})
+          </button>
+          {parts.map((part) => (
+            <button
+              key={part.part_id}
+              onClick={() => setSelectedPartFilter(part.part_id)}
+              className={`py-3 px-4 border-b-2 text-sm font-medium whitespace-nowrap ${
+                selectedPartFilter === part.part_id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-700 hover:text-gray-900 hover:border-gray-300'
+              }`}
+            >
+              {part.name} ({getOperationCountByPart(part.part_id)})
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* 一覧 */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="w-full">
@@ -595,7 +635,7 @@ function OperationsTab() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {operations.map((operation: any) => (
+            {filteredOperations.map((operation: any) => (
               <tr key={operation.operation_id}>
                 <td className="px-4 py-3">{operation.parts?.name || getPartName(operation.part_id)}</td>
                 <td className="px-4 py-3">{operation.name}</td>
