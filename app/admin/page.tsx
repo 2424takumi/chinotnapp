@@ -16,6 +16,7 @@ interface WorkLogDetail {
   quantity: number;
   loss_quantity: number;
   note: string | null;
+  work_date: string;
   created_at: string;
   updated_at: string;
   updated_by: string | null;
@@ -89,6 +90,7 @@ export default function AdminLogsPage() {
         quantity: log.quantity,
         loss_quantity: log.loss_quantity,
         note: log.note,
+        work_date: log.work_date,
         created_at: log.created_at,
         updated_at: log.updated_at,
         updated_by: log.updated_by,
@@ -123,7 +125,8 @@ export default function AdminLogsPage() {
 
   const handleExportCSV = () => {
     const headers = [
-      '日時',
+      '作業日',
+      '記録日時',
       '作業者',
       '部品',
       '工程',
@@ -142,6 +145,7 @@ export default function AdminLogsPage() {
       const minPerGood = goodQty > 0 ? (log.duration_minutes / goodQty).toFixed(2) : '—';
 
       return [
+        log.work_date,
         new Date(log.created_at).toLocaleString('ja-JP'),
         log.worker_name,
         log.part_name,
@@ -277,7 +281,8 @@ export default function AdminLogsPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left">日時</th>
+                  <th className="px-4 py-3 text-left">作業日</th>
+                  <th className="px-4 py-3 text-left">記録日時</th>
                   <th className="px-4 py-3 text-left">作業者</th>
                   <th className="px-4 py-3 text-left">部品</th>
                   <th className="px-4 py-3 text-left">工程</th>
@@ -299,6 +304,9 @@ export default function AdminLogsPage() {
 
                   return (
                     <tr key={log.log_id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {log.work_date}
+                      </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         {new Date(log.created_at).toLocaleString('ja-JP', {
                           year: 'numeric',

@@ -18,6 +18,9 @@ export default function Home() {
   const [quantity, setQuantity] = useState<string>('');
   const [lossQuantity, setLossQuantity] = useState<string>('0');
   const [note, setNote] = useState<string>('');
+  const [workDate, setWorkDate] = useState<string>(
+    new Date().toISOString().split('T')[0]
+  ); // デフォルトは今日
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -119,6 +122,7 @@ export default function Home() {
           quantity: qty,
           loss_quantity: loss,
           note: note || null,
+          work_date: workDate,
         })
         .select('log_id')
         .single();
@@ -153,6 +157,7 @@ export default function Home() {
       setQuantity('');
       setLossQuantity('0');
       setNote('');
+      setWorkDate(new Date().toISOString().split('T')[0]); // 今日にリセット
 
       // 成功メッセージを3秒後に消す
       setTimeout(() => setMessage(null), 3000);
@@ -293,6 +298,17 @@ export default function Home() {
               </div>
             </div>
           )}
+
+          {/* 作業日 */}
+          <div>
+            <label className="block text-sm font-medium mb-2">作業日</label>
+            <input
+              type="date"
+              value={workDate}
+              onChange={(e) => setWorkDate(e.target.value)}
+              className="w-full p-3 border-2 border-gray-300 rounded-lg"
+            />
+          </div>
 
           {/* 作業時間 */}
           <div>
