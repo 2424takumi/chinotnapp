@@ -293,7 +293,7 @@ export default function InventoryPage() {
 
   return (
     <div className="p-4 md:p-8">
-      <div className="mb-6">
+      <div className="mb-4 md:mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-gray-800">工程別在庫状況</h1>
         <p className="text-xs md:text-sm text-gray-600 mt-2">
           各部品の工程ごとの在庫数を表示しています（在庫0の工程は非表示）
@@ -321,20 +321,20 @@ export default function InventoryPage() {
                 </div>
 
                 {partData.operations.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3">
                     {partData.operations.map((op) => {
                       const shamisenInfo = getShamisen組Count(partData.part_id, op.inventory);
                       return (
                         <div
                           key={op.operation_id}
-                          className="bg-white rounded-lg border-2 border-gray-300 p-3 shadow hover:shadow-md transition-shadow"
+                          className="bg-white rounded-lg border-2 border-gray-300 p-2 md:p-3 shadow hover:shadow-md transition-shadow"
                         >
                           <div className="text-xs text-gray-600 mb-1">
                             {op.operation_name}
                           </div>
-                          <div className="text-2xl font-bold text-blue-600">
+                          <div className="text-xl md:text-2xl font-bold text-blue-600">
                             {op.inventory}
-                            <span className="text-sm text-gray-600 ml-1">個</span>
+                            <span className="text-xs md:text-sm text-gray-600 ml-1">個</span>
                           </div>
                           {shamisenInfo && (
                             <div className="text-xs text-gray-500 mt-1">
@@ -377,20 +377,20 @@ export default function InventoryPage() {
 
               {/* 工程カード群 */}
               {partData.operations.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4">
                   {partData.operations.map((op) => {
                     const shamisenInfo = getShamisen組Count(partData.part_id, op.inventory);
                     return (
                       <div
                         key={op.operation_id}
-                        className="bg-white rounded-lg border-2 border-gray-300 p-4 shadow hover:shadow-md transition-shadow"
+                        className="bg-white rounded-lg border-2 border-gray-300 p-2 md:p-4 shadow hover:shadow-md transition-shadow"
                       >
-                        <div className="text-sm text-gray-600 mb-2">
+                        <div className="text-xs md:text-sm text-gray-600 mb-1 md:mb-2">
                           {op.operation_name}
                         </div>
-                        <div className="text-3xl font-bold text-blue-600">
+                        <div className="text-2xl md:text-3xl font-bold text-blue-600">
                           {op.inventory}
-                          <span className="text-lg text-gray-600 ml-1">個</span>
+                          <span className="text-sm md:text-lg text-gray-600 ml-1">個</span>
                         </div>
                         {shamisenInfo && (
                           <div className="text-xs text-gray-500 mt-1">

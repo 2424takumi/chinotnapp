@@ -192,7 +192,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="p-4 max-w-2xl mx-auto">
+      <div className="p-4 max-w-2xl mx-auto overflow-x-hidden">
         {/* メッセージ */}
         {message && (
           <div
