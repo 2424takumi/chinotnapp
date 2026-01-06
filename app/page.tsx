@@ -2,16 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Worker, Part, Operation } from '@/lib/types/database';
+import type { Worker, Part, Operation, ProductVariant, SkinDesign } from '@/lib/types/database';
 
 export default function Home() {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
   const [operations, setOperations] = useState<Operation[]>([]);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [skinDesigns, setSkinDesigns] = useState<SkinDesign[]>([]);
 
   const [selectedWorker, setSelectedWorker] = useState<string | null>(null);
   const [selectedPart, setSelectedPart] = useState<string | null>(null);
   const [selectedOperation, setSelectedOperation] = useState<string | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
 
   const [hours, setHours] = useState<string>('0');
   const [minutes, setMinutes] = useState<string>('0');
@@ -34,7 +37,9 @@ export default function Home() {
   useEffect(() => {
     if (selectedPart) {
       fetchOperations(selectedPart);
+      fetchVariants(selectedPart);
       setSelectedOperation(null); // 工程リセット
+      setSelectedVariant(null); // バリエーションリセット
     }
   }, [selectedPart]);
 
@@ -64,6 +69,21 @@ export default function Home() {
       if (data) setOperations(data);
     } catch (error) {
       console.error('工程取得エラー:', error);
+    }
+  };
+
+  const fetchVariants = async (partId: string) => {
+    try {
+      const { data } = await supabase
+        .from('product_variants')
+        .select('*, skin_designs(name)')
+        .eq('base_part_id', partId)
+        .eq('active', true)
+        .order('order_index');
+
+      if (data) setVariants(data as any);
+    } catch (error) {
+      console.error('バリエーション取得エラー:', error);
     }
   };
 
@@ -123,6 +143,7 @@ export default function Home() {
           loss_quantity: loss,
           note: note || null,
           work_date: workDate,
+          variant_id: selectedVariant || null,
         })
         .select('log_id')
         .single();
@@ -151,7 +172,9 @@ export default function Home() {
       setSelectedWorker(null);
       setSelectedPart(null);
       setSelectedOperation(null);
+      setSelectedVariant(null);
       setOperations([]);
+      setVariants([]);
       setHours('0');
       setMinutes('0');
       setQuantity('');
@@ -296,6 +319,45 @@ export default function Home() {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* 商品バリエーション選択 */}
+          {selectedPart && variants.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                商品バリエーション（任意）
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {variants.map((variant: any) => (
+                  <button
+                    key={variant.variant_id}
+                    type="button"
+                    onClick={() => setSelectedVariant(variant.variant_id)}
+                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                      selectedVariant === variant.variant_id
+                        ? 'bg-orange-600 text-white border-orange-600'
+                        : 'bg-white text-gray-700 border-gray-300 hover:border-orange-400'
+                    }`}
+                  >
+                    <div>{variant.display_name}</div>
+                    {variant.skin_designs?.name && (
+                      <div className="text-xs mt-1 opacity-80">
+                        {variant.skin_designs.name}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+              {selectedVariant && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedVariant(null)}
+                  className="mt-2 text-sm text-gray-600 hover:text-gray-800"
+                >
+                  選択解除
+                </button>
+              )}
             </div>
           )}
 
