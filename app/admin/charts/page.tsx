@@ -587,27 +587,28 @@ export default function ChartsPage() {
                             </span>
                             {row.operation}
                           </td>
-                        {productivityMatrix.workers.map((worker) => {
-                          const value = row[worker];
-                          const isNumeric = value !== '—';
-                          let bgColor = 'bg-white';
-                          if (isNumeric) {
-                            const num = parseFloat(value);
-                            if (num < 5) bgColor = 'bg-green-100';
-                            else if (num < 10) bgColor = 'bg-yellow-100';
-                            else bgColor = 'bg-red-100';
-                          }
-                          return (
-                            <td
-                              key={worker}
-                              className={`border px-2 md:px-4 py-2 text-center ${bgColor}`}
-                            >
-                              {value}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
+                          {productivityMatrix.workers.map((worker) => {
+                            const value = row[worker];
+                            const isNumeric = value !== '—';
+                            let bgColor = 'bg-white';
+                            if (isNumeric) {
+                              const num = parseFloat(value);
+                              if (num < 5) bgColor = 'bg-green-100';
+                              else if (num < 10) bgColor = 'bg-yellow-100';
+                              else bgColor = 'bg-red-100';
+                            }
+                            return (
+                              <td
+                                key={worker}
+                                className={`border px-2 md:px-4 py-2 text-center ${bgColor}`}
+                              >
+                                {value}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
