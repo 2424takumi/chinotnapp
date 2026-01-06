@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Worker, Part, Operation } from '@/lib/types/database';
+import type { Worker, Part, Operation, ProductVariant } from '@/lib/types/database';
 
 interface WorkLog {
   log_id: string;
@@ -14,9 +14,16 @@ interface WorkLog {
   loss_quantity: number;
   note: string | null;
   is_deleted: boolean;
+  variant_id: string | null;
   created_at: string;
   updated_at: string;
   updated_by: string | null;
+}
+
+interface VariantInventory {
+  variant_id: string;
+  variant_name: string;
+  inventory: number;
 }
 
 interface OperationInventory {
@@ -24,6 +31,7 @@ interface OperationInventory {
   operation_name: string;
   order_index: number;
   inventory: number;
+  variants?: VariantInventory[];
 }
 
 interface PartInventory {
@@ -36,6 +44,7 @@ export default function InventoryPage() {
   const [parts, setParts] = useState<Part[]>([]);
   const [operations, setOperations] = useState<Operation[]>([]);
   const [logs, setLogs] = useState<WorkLog[]>([]);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [inventory, setInventory] = useState<PartInventory[]>([]);
   const [loading, setLoading] = useState(true);
   const [workers, setWorkers] = useState<Worker[]>([]);
@@ -59,13 +68,14 @@ export default function InventoryPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [partsRes, operationsRes, logsRes, workersRes, consumptionsRes, bomRes] = await Promise.all([
+      const [partsRes, operationsRes, logsRes, workersRes, consumptionsRes, bomRes, variantsRes] = await Promise.all([
         supabase.from('parts').select('*').eq('active', true).order('order_index'),
         supabase.from('operations').select('*').eq('active', true).order('order_index'),
         supabase.from('work_logs').select('*').eq('is_deleted', false),
         supabase.from('workers').select('*').eq('active', true),
         supabase.from('bom_consumption').select('*'),
         supabase.from('bom').select('*'),
+        supabase.from('product_variants').select('*').eq('active', true),
       ]);
 
       if (partsRes.data) setParts(partsRes.data);
@@ -74,6 +84,7 @@ export default function InventoryPage() {
       if (workersRes.data) setWorkers(workersRes.data);
       if (consumptionsRes.data) setBomConsumptions(consumptionsRes.data);
       if (bomRes.data) setBomData(bomRes.data);
+      if (variantsRes.data) setVariants(variantsRes.data);
     } catch (error) {
       console.error('データ取得エラー:', error);
     } finally {
@@ -129,11 +140,28 @@ export default function InventoryPage() {
           inventory -= consumed;
         }
 
+        // バリエーション別在庫を計算
+        const partVariants = variants.filter(v => v.base_part_id === part.part_id);
+        const variantInventories: VariantInventory[] = partVariants.map(variant => {
+          const variantLogs = logs.filter(log =>
+            log.operation_id === op.operation_id &&
+            log.variant_id === variant.variant_id
+          );
+          const variantGood = variantLogs.reduce((sum, log) => sum + (log.quantity - log.loss_quantity), 0);
+
+          return {
+            variant_id: variant.variant_id,
+            variant_name: variant.display_name,
+            inventory: variantGood,
+          };
+        }).filter(v => v.inventory > 0);
+
         return {
           operation_id: op.operation_id,
           operation_name: op.operation_name,
           order_index: op.order_index,
           inventory,
+          variants: variantInventories.length > 0 ? variantInventories : undefined,
         };
       });
 
@@ -336,6 +364,16 @@ export default function InventoryPage() {
                             {op.inventory}
                             <span className="text-xs md:text-sm text-gray-600 ml-1">個</span>
                           </div>
+                          {op.variants && op.variants.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {op.variants.map(v => (
+                                <div key={v.variant_id} className="text-xs bg-orange-50 border border-orange-200 rounded px-2 py-1">
+                                  <span className="text-orange-800 font-medium">{v.variant_name}</span>
+                                  <span className="text-orange-600 ml-1">× {v.inventory}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                           {shamisenInfo && (
                             <div className="text-xs text-gray-500 mt-1">
                               ({shamisenInfo.unit}{shamisenInfo.count}{shamisenInfo.unit === '三味線' ? '台' : '個'}分
@@ -392,6 +430,16 @@ export default function InventoryPage() {
                           {op.inventory}
                           <span className="text-sm md:text-lg text-gray-600 ml-1">個</span>
                         </div>
+                        {op.variants && op.variants.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {op.variants.map(v => (
+                              <div key={v.variant_id} className="text-xs bg-orange-50 border border-orange-200 rounded px-2 py-1">
+                                <span className="text-orange-800 font-medium">{v.variant_name}</span>
+                                <span className="text-orange-600 ml-1">× {v.inventory}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         {shamisenInfo && (
                           <div className="text-xs text-gray-500 mt-1">
                             ({shamisenInfo.unit}{shamisenInfo.count}{shamisenInfo.unit === '三味線' ? '台' : '個'}分
