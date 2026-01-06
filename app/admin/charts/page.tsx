@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getWorkerColorByName } from '@/lib/utils/colors';
+import { getPartColorByName } from '@/lib/utils/partColors';
 import {
   BarChart,
   Bar,
@@ -130,8 +131,8 @@ export default function ChartsPage() {
       return { chartData: [], totalTime: 0, totalQty: 0, totalGood: 0, date: latestDate, workers: [] };
     }
 
-    // 工程別×作業者別の集計
-    const operationWorkerMap = new Map<string, Map<string, number>>();
+    // 工程別×作業者別の集計（部品情報も保持）
+    const operationWorkerMap = new Map<string, { workerMap: Map<string, number>; partName: string }>();
     let totalTime = 0;
     let totalQty = 0;
     let totalLoss = 0;
@@ -139,11 +140,11 @@ export default function ChartsPage() {
     latestLogs.forEach((log) => {
       const key = log.operation_name;
       if (!operationWorkerMap.has(key)) {
-        operationWorkerMap.set(key, new Map());
+        operationWorkerMap.set(key, { workerMap: new Map(), partName: log.part_name });
       }
-      const workerMap = operationWorkerMap.get(key)!;
-      const current = workerMap.get(log.worker_name) || 0;
-      workerMap.set(log.worker_name, current + log.quantity);
+      const data = operationWorkerMap.get(key)!;
+      const current = data.workerMap.get(log.worker_name) || 0;
+      data.workerMap.set(log.worker_name, current + log.quantity);
 
       totalTime += log.duration_minutes;
       totalQty += log.quantity;
@@ -151,10 +152,10 @@ export default function ChartsPage() {
     });
 
     const allWorkers = Array.from(new Set(latestLogs.map((l) => l.worker_name)));
-    const chartData = Array.from(operationWorkerMap.entries()).map(([operation, workerMap]) => {
-      const row: any = { operation };
+    const chartData = Array.from(operationWorkerMap.entries()).map(([operation, data]) => {
+      const row: any = { operation, partName: data.partName };
       allWorkers.forEach((worker) => {
-        row[worker] = workerMap.get(worker) || 0;
+        row[worker] = data.workerMap.get(worker) || 0;
       });
       return row;
     });
@@ -172,6 +173,7 @@ export default function ChartsPage() {
   // グラフ1: 工程ごとの日別生産数
   const getDailyProductionByOperation = () => {
     const dateMap = new Map<string, Map<string, number>>();
+    const operationPartMap = new Map<string, string>(); // 工程→部品名のマッピング
 
     logs.forEach((log) => {
       const date = new Date(log.created_at).toISOString().split('T')[0];
@@ -181,6 +183,11 @@ export default function ChartsPage() {
       const operationMap = dateMap.get(date)!;
       const current = operationMap.get(log.operation_name) || 0;
       operationMap.set(log.operation_name, current + log.quantity);
+
+      // 工程と部品のマッピングを保存
+      if (!operationPartMap.has(log.operation_name)) {
+        operationPartMap.set(log.operation_name, log.part_name);
+      }
     });
 
     // すべての工程名を取得
@@ -196,12 +203,13 @@ export default function ChartsPage() {
       })
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    return { chartData, operations: allOperations };
+    return { chartData, operations: allOperations, operationPartMap };
   };
 
   // グラフ2: 人別×工程別の生産性（分/良品）
   const getProductivityMatrix = () => {
     const matrix = new Map<string, Map<string, { minutes: number; good: number }>>();
+    const operationPartMap = new Map<string, string>(); // 工程→部品名のマッピング
 
     logs.forEach((log) => {
       const key = `${log.worker_name}|${log.operation_name}`;
@@ -213,6 +221,11 @@ export default function ChartsPage() {
       current.minutes += log.duration_minutes;
       current.good += log.quantity - log.loss_quantity;
       stats.set('total', current);
+
+      // 工程と部品のマッピングを保存
+      if (!operationPartMap.has(log.operation_name)) {
+        operationPartMap.set(log.operation_name, log.part_name);
+      }
     });
 
     const allWorkers = Array.from(new Set(logs.map((l) => l.worker_name)));
@@ -220,7 +233,7 @@ export default function ChartsPage() {
 
     const tableData: any[] = [];
     allOperations.forEach((op) => {
-      const row: any = { operation: op };
+      const row: any = { operation: op, partName: operationPartMap.get(op) || '' };
       allWorkers.forEach((worker) => {
         const key = `${worker}|${op}`;
         const stats = matrix.get(key)?.get('total');
@@ -240,7 +253,11 @@ export default function ChartsPage() {
   const getAverageTimeByOperation = () => {
     const operationStats = new Map<
       string,
-      { total: { minutes: number; qty: number }; byWorker: Map<string, { minutes: number; qty: number }> }
+      {
+        total: { minutes: number; qty: number };
+        byWorker: Map<string, { minutes: number; qty: number }>;
+        partName: string;
+      }
     >();
 
     logs.forEach((log) => {
@@ -248,6 +265,7 @@ export default function ChartsPage() {
         operationStats.set(log.operation_name, {
           total: { minutes: 0, qty: 0 },
           byWorker: new Map(),
+          partName: log.part_name,
         });
       }
 
@@ -264,7 +282,7 @@ export default function ChartsPage() {
     });
 
     const chartData = Array.from(operationStats.entries()).map(([operation, stats]) => {
-      const row: any = { operation };
+      const row: any = { operation, partName: stats.partName };
       row['全体平均'] = stats.total.qty > 0 ? (stats.total.minutes / stats.total.qty).toFixed(1) : 0;
 
       stats.byWorker.forEach((workerStats, workerName) => {
@@ -280,11 +298,11 @@ export default function ChartsPage() {
 
   // グラフ4: 工程別のロス率
   const getLossRateByOperation = () => {
-    const operationStats = new Map<string, { quantity: number; loss: number }>();
+    const operationStats = new Map<string, { quantity: number; loss: number; partName: string }>();
 
     logs.forEach((log) => {
       if (!operationStats.has(log.operation_name)) {
-        operationStats.set(log.operation_name, { quantity: 0, loss: 0 });
+        operationStats.set(log.operation_name, { quantity: 0, loss: 0, partName: log.part_name });
       }
       const stats = operationStats.get(log.operation_name)!;
       stats.quantity += log.quantity;
@@ -294,6 +312,7 @@ export default function ChartsPage() {
     const chartData = Array.from(operationStats.entries())
       .map(([operation, stats]) => ({
         operation,
+        partName: stats.partName,
         lossRate: stats.quantity > 0 ? ((stats.loss / stats.quantity) * 100).toFixed(1) : 0,
         lossRateNum: stats.quantity > 0 ? (stats.loss / stats.quantity) * 100 : 0,
       }))
@@ -383,6 +402,17 @@ export default function ChartsPage() {
                         return (
                           <tr key={idx} className="hover:bg-gray-50">
                             <td className="border border-gray-300 px-2 md:px-4 py-2 md:py-3 font-medium text-gray-800">
+                              {(() => {
+                                const partColor = getPartColorByName(row.partName);
+                                return (
+                                  <span
+                                    className="inline-block px-2 py-0.5 rounded text-xs mr-2 font-medium"
+                                    style={{ backgroundColor: partColor.bg, color: partColor.text }}
+                                  >
+                                    {row.partName}
+                                  </span>
+                                );
+                              })()}
                               {row.operation}
                             </td>
                             {latestDaySummary.workers.map((worker) => {
@@ -464,6 +494,27 @@ export default function ChartsPage() {
             </div>
           </div>
 
+          {/* 部品カラー凡例 */}
+          {parts.length > 0 && (
+            <div className="bg-white p-4 rounded-lg shadow">
+              <h4 className="text-sm font-bold mb-3 text-gray-700">部品カラー凡例</h4>
+              <div className="flex flex-wrap gap-2">
+                {parts.map((part) => {
+                  const partColor = getPartColorByName(part.name);
+                  return (
+                    <span
+                      key={part.part_id}
+                      className="inline-block px-2 py-0.5 rounded text-xs font-medium"
+                      style={{ backgroundColor: partColor.bg, color: partColor.text }}
+                    >
+                      {part.name}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* グラフ1: 工程ごとの日別生産数 */}
           <div className="bg-white p-4 md:p-6 rounded-lg shadow">
             <h3 className="text-base md:text-lg font-bold mb-2">工程ごとの日別生産数</h3>
@@ -478,15 +529,20 @@ export default function ChartsPage() {
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  {dailyProduction.operations.map((op, idx) => (
-                    <Line
-                      key={op}
-                      type="monotone"
-                      dataKey={op}
-                      stroke={COLORS[idx % COLORS.length]}
-                      strokeWidth={2}
-                    />
-                  ))}
+                  {dailyProduction.operations.map((op, idx) => {
+                    const partName = dailyProduction.operationPartMap.get(op) || '';
+                    const partColor = getPartColorByName(partName);
+                    return (
+                      <Line
+                        key={op}
+                        type="monotone"
+                        dataKey={op}
+                        name={`【${partName}】${op}`}
+                        stroke={partColor.text}
+                        strokeWidth={2}
+                      />
+                    );
+                  })}
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -518,9 +574,19 @@ export default function ChartsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {productivityMatrix.tableData.map((row, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50">
-                        <td className="border px-2 md:px-4 py-2 font-medium">{row.operation}</td>
+                    {productivityMatrix.tableData.map((row, idx) => {
+                      const partColor = getPartColorByName(row.partName);
+                      return (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          <td className="border px-2 md:px-4 py-2 font-medium">
+                            <span
+                              className="inline-block px-2 py-0.5 rounded text-xs mr-2 font-medium"
+                              style={{ backgroundColor: partColor.bg, color: partColor.text }}
+                            >
+                              {row.partName}
+                            </span>
+                            {row.operation}
+                          </td>
                         {productivityMatrix.workers.map((worker) => {
                           const value = row[worker];
                           const isNumeric = value !== '—';
@@ -560,7 +626,35 @@ export default function ChartsPage() {
               <ResponsiveContainer width="100%" height={350}>
                 <BarChart data={averageTime.chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="operation" angle={-45} textAnchor="end" height={120} tick={{ fontSize: 11 }} />
+                  <XAxis
+                    dataKey="operation"
+                    angle={-45}
+                    textAnchor="end"
+                    height={120}
+                    tick={(props) => {
+                      const { x, y, payload } = props;
+                      const row = averageTime.chartData.find((r) => r.operation === payload.value);
+                      const partColor = getPartColorByName(row?.partName || '');
+                      return (
+                        <g transform={`translate(${x},${y})`}>
+                          <text
+                            x={0}
+                            y={0}
+                            dy={16}
+                            textAnchor="end"
+                            fill="#666"
+                            fontSize={11}
+                            transform="rotate(-45)"
+                          >
+                            <tspan fill={partColor.text} fontWeight="bold">
+                              【{row?.partName}】
+                            </tspan>
+                            {payload.value}
+                          </text>
+                        </g>
+                      );
+                    }}
+                  />
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -585,7 +679,26 @@ export default function ChartsPage() {
                 <BarChart data={lossRate} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" tick={{ fontSize: 12 }} />
-                  <YAxis dataKey="operation" type="category" width={120} tick={{ fontSize: 11 }} />
+                  <YAxis
+                    dataKey="operation"
+                    type="category"
+                    width={150}
+                    tick={(props) => {
+                      const { x, y, payload } = props;
+                      const entry = lossRate.find((r) => r.operation === payload.value);
+                      const partColor = getPartColorByName(entry?.partName || '');
+                      return (
+                        <g transform={`translate(${x},${y})`}>
+                          <text x={0} y={0} dy={4} textAnchor="end" fill="#666" fontSize={11}>
+                            <tspan fill={partColor.text} fontWeight="bold">
+                              【{entry?.partName}】
+                            </tspan>
+                            {payload.value}
+                          </text>
+                        </g>
+                      );
+                    }}
+                  />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
                   <Bar dataKey="lossRate" name="ロス率（%）">
