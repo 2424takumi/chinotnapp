@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Worker, Part, Operation } from '@/lib/types/database';
+import type { Worker, Part, Operation, ProductVariant } from '@/lib/types/database';
 import { getWorkerColorByName } from '@/lib/utils/colors';
 
 interface WorkLogDetail {
@@ -18,6 +18,8 @@ interface WorkLogDetail {
   loss_quantity: number;
   note: string | null;
   work_date: string;
+  variant_id: string | null;
+  variant_display_name: string | null;
   created_at: string;
   updated_at: string;
   updated_by: string | null;
@@ -64,7 +66,8 @@ export default function AdminLogsPage() {
           *,
           workers(name),
           parts(name),
-          operations(name)
+          operations(name),
+          product_variants(display_name)
         `)
         .eq('is_deleted', false)
         .order('created_at', { ascending: false });
@@ -92,6 +95,8 @@ export default function AdminLogsPage() {
         loss_quantity: log.loss_quantity,
         note: log.note,
         work_date: log.work_date,
+        variant_id: log.variant_id,
+        variant_display_name: log.product_variants?.display_name || null,
         created_at: log.created_at,
         updated_at: log.updated_at,
         updated_by: log.updated_by,
@@ -310,6 +315,14 @@ export default function AdminLogsPage() {
                         {log.worker_name}
                       </span>
                     </div>
+                    {log.variant_display_name && (
+                      <div className="col-span-2">
+                        <span className="text-gray-600">バリエーション:</span>{' '}
+                        <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded text-xs">
+                          {log.variant_display_name}
+                        </span>
+                      </div>
+                    )}
                     <div>
                       <span className="text-gray-600">作業時間:</span> {log.duration_minutes}分
                     </div>
@@ -355,6 +368,7 @@ export default function AdminLogsPage() {
                     <th className="px-4 py-3 text-left">作業者</th>
                     <th className="px-4 py-3 text-left">部品</th>
                     <th className="px-4 py-3 text-left">工程</th>
+                    <th className="px-4 py-3 text-left">バリエーション</th>
                     <th className="px-4 py-3 text-right">作業時間(分)</th>
                     <th className="px-4 py-3 text-right">数量</th>
                     <th className="px-4 py-3 text-right">ロス数</th>
@@ -392,6 +406,15 @@ export default function AdminLogsPage() {
                         </td>
                         <td className="px-4 py-3">{log.part_name}</td>
                         <td className="px-4 py-3">{log.operation_name}</td>
+                        <td className="px-4 py-3">
+                          {log.variant_display_name ? (
+                            <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded text-xs whitespace-nowrap">
+                              {log.variant_display_name}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-right">{log.duration_minutes}</td>
                         <td className="px-4 py-3 text-right">{log.quantity}</td>
                         <td className="px-4 py-3 text-right">{log.loss_quantity}</td>
