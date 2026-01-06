@@ -105,6 +105,8 @@ export interface Database {
           loss_quantity: number
           note: string | null
           is_deleted: boolean
+          work_date: string
+          variant_id: string | null
           created_at: string
           updated_at: string
           updated_by: string | null
@@ -119,6 +121,8 @@ export interface Database {
           loss_quantity?: number
           note?: string | null
           is_deleted?: boolean
+          work_date?: string
+          variant_id?: string | null
           created_at?: string
           updated_at?: string
           updated_by?: string | null
@@ -133,9 +137,78 @@ export interface Database {
           loss_quantity?: number
           note?: string | null
           is_deleted?: boolean
+          work_date?: string
+          variant_id?: string | null
           created_at?: string
           updated_at?: string
           updated_by?: string | null
+        }
+      }
+      skin_designs: {
+        Row: {
+          skin_design_id: string
+          name: string
+          description: string | null
+          order_index: number
+          active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          skin_design_id?: string
+          name: string
+          description?: string | null
+          order_index?: number
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          skin_design_id?: string
+          name?: string
+          description?: string | null
+          order_index?: number
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      product_variants: {
+        Row: {
+          variant_id: string
+          base_part_id: string
+          skin_design_id: string | null
+          variant_code: string
+          display_name: string
+          description: string | null
+          order_index: number
+          active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          variant_id?: string
+          base_part_id: string
+          skin_design_id?: string | null
+          variant_code: string
+          display_name: string
+          description?: string | null
+          order_index?: number
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          variant_id?: string
+          base_part_id?: string
+          skin_design_id?: string | null
+          variant_code?: string
+          display_name?: string
+          description?: string | null
+          order_index?: number
+          active?: boolean
+          created_at?: string
+          updated_at?: string
         }
       }
       bom: {
@@ -207,11 +280,17 @@ export type Operation = Database['public']['Tables']['operations']['Row'];
 export type WorkLog = Database['public']['Tables']['work_logs']['Row'];
 export type BOM = Database['public']['Tables']['bom']['Row'];
 export type BOMConsumption = Database['public']['Tables']['bom_consumption']['Row'];
+export type SkinDesign = Database['public']['Tables']['skin_designs']['Row'];
+export type ProductVariant = Database['public']['Tables']['product_variants']['Row'];
 
 export type WorkLogInsert = Database['public']['Tables']['work_logs']['Insert'];
 export type WorkLogUpdate = Database['public']['Tables']['work_logs']['Update'];
 export type BOMInsert = Database['public']['Tables']['bom']['Insert'];
 export type BOMConsumptionInsert = Database['public']['Tables']['bom_consumption']['Insert'];
+export type SkinDesignInsert = Database['public']['Tables']['skin_designs']['Insert'];
+export type SkinDesignUpdate = Database['public']['Tables']['skin_designs']['Update'];
+export type ProductVariantInsert = Database['public']['Tables']['product_variants']['Insert'];
+export type ProductVariantUpdate = Database['public']['Tables']['product_variants']['Update'];
 
 // 結合したデータ型（実績一覧表示用）
 export interface WorkLogWithDetails extends WorkLog {
