@@ -2,8 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Worker, Part, Operation, ProductVariant } from '@/lib/types/database';
+import type { Worker, Part, Operation } from '@/lib/types/database';
 import { getWorkerColorByName } from '@/lib/utils/colors';
+
+interface AttributeValueInfo {
+  attribute_name: string;
+  value_name: string;
+}
 
 interface WorkLogDetail {
   log_id: string;
@@ -20,6 +25,7 @@ interface WorkLogDetail {
   work_date: string;
   variant_id: string | null;
   variant_display_name: string | null;
+  attribute_values: AttributeValueInfo[];
   created_at: string;
   updated_at: string;
   updated_by: string | null;
@@ -38,7 +44,6 @@ export default function AdminLogsPage() {
   const [filterDateTo, setFilterDateTo] = useState<string>('');
 
   const [loading, setLoading] = useState(false);
-  const [editingLog, setEditingLog] = useState<WorkLogDetail | null>(null);
 
   useEffect(() => {
     fetchMasterData();
@@ -82,27 +87,50 @@ export default function AdminLogsPage() {
 
       if (error) throw error;
 
-      const formattedLogs: WorkLogDetail[] = (data || []).map((log: any) => ({
-        log_id: log.log_id,
-        worker_id: log.worker_id,
-        worker_name: log.workers?.name || '不明',
-        part_id: log.part_id,
-        part_name: log.parts?.name || '不明',
-        operation_id: log.operation_id,
-        operation_name: log.operations?.name || '不明',
-        duration_minutes: log.duration_minutes,
-        quantity: log.quantity,
-        loss_quantity: log.loss_quantity,
-        note: log.note,
-        work_date: log.work_date,
-        variant_id: log.variant_id,
-        variant_display_name: log.product_variants?.display_name || null,
-        created_at: log.created_at,
-        updated_at: log.updated_at,
-        updated_by: log.updated_by,
-      }));
+      // 各ログの属性値を取得
+      const logsWithAttributes = await Promise.all(
+        (data || []).map(async (log: any) => {
+          // work_log_attributes から属性値を取得
+          const { data: attrData } = await supabase
+            .from('work_log_attributes')
+            .select(`
+              value_id,
+              variant_attribute_values (
+                name,
+                variant_attributes (name)
+              )
+            `)
+            .eq('work_log_id', log.log_id);
 
-      setLogs(formattedLogs);
+          const attributeValues: AttributeValueInfo[] = (attrData || []).map((attr: any) => ({
+            attribute_name: attr.variant_attribute_values?.variant_attributes?.name || '',
+            value_name: attr.variant_attribute_values?.name || ''
+          }));
+
+          return {
+            log_id: log.log_id,
+            worker_id: log.worker_id,
+            worker_name: log.workers?.name || '不明',
+            part_id: log.part_id,
+            part_name: log.parts?.name || '不明',
+            operation_id: log.operation_id,
+            operation_name: log.operations?.name || '不明',
+            duration_minutes: log.duration_minutes,
+            quantity: log.quantity,
+            loss_quantity: log.loss_quantity,
+            note: log.note,
+            work_date: log.work_date,
+            variant_id: log.variant_id,
+            variant_display_name: log.product_variants?.display_name || null,
+            attribute_values: attributeValues,
+            created_at: log.created_at,
+            updated_at: log.updated_at,
+            updated_by: log.updated_by,
+          };
+        })
+      );
+
+      setLogs(logsWithAttributes);
     } catch (error) {
       console.error('ログ取得エラー:', error);
     } finally {
@@ -136,6 +164,7 @@ export default function AdminLogsPage() {
       '作業者',
       '部品',
       '工程',
+      '属性値',
       '作業時間(分)',
       '数量',
       'ロス数',
@@ -150,12 +179,18 @@ export default function AdminLogsPage() {
       const minPerPiece = (log.duration_minutes / log.quantity).toFixed(2);
       const minPerGood = goodQty > 0 ? (log.duration_minutes / goodQty).toFixed(2) : '—';
 
+      // 属性値を文字列に変換
+      const attributesStr = log.attribute_values.length > 0
+        ? log.attribute_values.map(av => `${av.attribute_name}:${av.value_name}`).join(', ')
+        : '';
+
       return [
         log.work_date,
         new Date(log.created_at).toLocaleString('ja-JP'),
         log.worker_name,
         log.part_name,
         log.operation_name,
+        attributesStr,
         log.duration_minutes,
         log.quantity,
         log.loss_quantity,
@@ -315,6 +350,18 @@ export default function AdminLogsPage() {
                         {log.worker_name}
                       </span>
                     </div>
+                    {log.attribute_values.length > 0 && (
+                      <div className="col-span-2">
+                        <span className="text-gray-600">属性:</span>{' '}
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {log.attribute_values.map((av, idx) => (
+                            <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                              {av.attribute_name}: {av.value_name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {log.variant_display_name && (
                       <div className="col-span-2">
                         <span className="text-gray-600">バリエーション:</span>{' '}
@@ -368,7 +415,7 @@ export default function AdminLogsPage() {
                     <th className="px-4 py-3 text-left">作業者</th>
                     <th className="px-4 py-3 text-left">部品</th>
                     <th className="px-4 py-3 text-left">工程</th>
-                    <th className="px-4 py-3 text-left">バリエーション</th>
+                    <th className="px-4 py-3 text-left">属性値</th>
                     <th className="px-4 py-3 text-right">作業時間(分)</th>
                     <th className="px-4 py-3 text-right">数量</th>
                     <th className="px-4 py-3 text-right">ロス数</th>
@@ -407,10 +454,14 @@ export default function AdminLogsPage() {
                         <td className="px-4 py-3">{log.part_name}</td>
                         <td className="px-4 py-3">{log.operation_name}</td>
                         <td className="px-4 py-3">
-                          {log.variant_display_name ? (
-                            <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded text-xs whitespace-nowrap">
-                              {log.variant_display_name}
-                            </span>
+                          {log.attribute_values.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {log.attribute_values.map((av, idx) => (
+                                <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs whitespace-nowrap">
+                                  {av.attribute_name}: {av.value_name}
+                                </span>
+                              ))}
+                            </div>
                           ) : (
                             <span className="text-gray-400">—</span>
                           )}

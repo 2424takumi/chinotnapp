@@ -2,10 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Worker, Part, Operation, SkinDesign, ProductVariant, Database } from '@/lib/types/database';
+import type {
+  Worker,
+  Part,
+  Operation,
+  SkinDesign,
+  ProductVariant,
+  Database
+} from '@/lib/types/database';
+import { VariantAttributesTab, VariantAttributeValuesTab, ProductVariantsV2Tab } from './variant-tabs';
 
 export default function MastersPage() {
-  const [activeTab, setActiveTab] = useState<'workers' | 'parts' | 'operations' | 'skin_designs' | 'product_variants'>('workers');
+  const [activeTab, setActiveTab] = useState<'workers' | 'parts' | 'operations' | 'skin_designs' | 'variant_attributes' | 'variant_attribute_values' | 'product_variants_v2'>('workers');
 
   return (
     <div className="space-y-6">
@@ -55,9 +63,29 @@ export default function MastersPage() {
             皮デザイン
           </button>
           <button
-            onClick={() => setActiveTab('product_variants')}
+            onClick={() => setActiveTab('variant_attributes')}
             className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-              activeTab === 'product_variants'
+              activeTab === 'variant_attributes'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            バリエーション属性
+          </button>
+          <button
+            onClick={() => setActiveTab('variant_attribute_values')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'variant_attribute_values'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            属性値
+          </button>
+          <button
+            onClick={() => setActiveTab('product_variants_v2')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'product_variants_v2'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
@@ -73,7 +101,9 @@ export default function MastersPage() {
         {activeTab === 'parts' && <PartsTab />}
         {activeTab === 'operations' && <OperationsTab />}
         {activeTab === 'skin_designs' && <SkinDesignsTab />}
-        {activeTab === 'product_variants' && <ProductVariantsTab />}
+        {activeTab === 'variant_attributes' && <VariantAttributesTab />}
+        {activeTab === 'variant_attribute_values' && <VariantAttributeValuesTab />}
+        {activeTab === 'product_variants_v2' && <ProductVariantsV2Tab />}
       </div>
     </div>
   );

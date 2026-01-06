@@ -260,6 +260,159 @@ export interface Database {
           created_at?: string
         }
       }
+      variant_attributes: {
+        Row: {
+          attribute_id: string
+          name: string
+          description: string | null
+          order_index: number
+          active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          attribute_id?: string
+          name: string
+          description?: string | null
+          order_index?: number
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          attribute_id?: string
+          name?: string
+          description?: string | null
+          order_index?: number
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      variant_attribute_values: {
+        Row: {
+          value_id: string
+          attribute_id: string
+          name: string
+          description: string | null
+          order_index: number
+          active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          value_id?: string
+          attribute_id: string
+          name: string
+          description?: string | null
+          order_index?: number
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          value_id?: string
+          attribute_id?: string
+          name?: string
+          description?: string | null
+          order_index?: number
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      product_variants_v2: {
+        Row: {
+          variant_id: string
+          base_part_id: string
+          variant_code: string
+          display_name: string
+          description: string | null
+          order_index: number
+          active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          variant_id?: string
+          base_part_id: string
+          variant_code: string
+          display_name: string
+          description?: string | null
+          order_index?: number
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          variant_id?: string
+          base_part_id?: string
+          variant_code?: string
+          display_name?: string
+          description?: string | null
+          order_index?: number
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      variant_attribute_assignments: {
+        Row: {
+          assignment_id: string
+          variant_id: string
+          value_id: string
+          created_at: string
+        }
+        Insert: {
+          assignment_id?: string
+          variant_id: string
+          value_id: string
+          created_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          variant_id?: string
+          value_id?: string
+          created_at?: string
+        }
+      }
+      operation_variant_attributes: {
+        Row: {
+          operation_id: string
+          attribute_id: string
+          created_at: string
+        }
+        Insert: {
+          operation_id: string
+          attribute_id: string
+          created_at?: string
+        }
+        Update: {
+          operation_id?: string
+          attribute_id?: string
+          created_at?: string
+        }
+      }
+      work_log_attributes: {
+        Row: {
+          work_log_attribute_id: string
+          work_log_id: string
+          value_id: string
+          created_at: string
+        }
+        Insert: {
+          work_log_attribute_id?: string
+          work_log_id: string
+          value_id: string
+          created_at?: string
+        }
+        Update: {
+          work_log_attribute_id?: string
+          work_log_id?: string
+          value_id?: string
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -283,6 +436,14 @@ export type BOMConsumption = Database['public']['Tables']['bom_consumption']['Ro
 export type SkinDesign = Database['public']['Tables']['skin_designs']['Row'];
 export type ProductVariant = Database['public']['Tables']['product_variants']['Row'];
 
+// 新しい階層型バリエーション関連の型エイリアス
+export type VariantAttribute = Database['public']['Tables']['variant_attributes']['Row'];
+export type VariantAttributeValue = Database['public']['Tables']['variant_attribute_values']['Row'];
+export type ProductVariantV2 = Database['public']['Tables']['product_variants_v2']['Row'];
+export type VariantAttributeAssignment = Database['public']['Tables']['variant_attribute_assignments']['Row'];
+export type OperationVariantAttribute = Database['public']['Tables']['operation_variant_attributes']['Row'];
+export type WorkLogAttribute = Database['public']['Tables']['work_log_attributes']['Row'];
+
 export type WorkLogInsert = Database['public']['Tables']['work_logs']['Insert'];
 export type WorkLogUpdate = Database['public']['Tables']['work_logs']['Update'];
 export type BOMInsert = Database['public']['Tables']['bom']['Insert'];
@@ -291,6 +452,20 @@ export type SkinDesignInsert = Database['public']['Tables']['skin_designs']['Ins
 export type SkinDesignUpdate = Database['public']['Tables']['skin_designs']['Update'];
 export type ProductVariantInsert = Database['public']['Tables']['product_variants']['Insert'];
 export type ProductVariantUpdate = Database['public']['Tables']['product_variants']['Update'];
+
+// 新しい階層型バリエーション関連のInsert/Update型
+export type VariantAttributeInsert = Database['public']['Tables']['variant_attributes']['Insert'];
+export type VariantAttributeUpdate = Database['public']['Tables']['variant_attributes']['Update'];
+export type VariantAttributeValueInsert = Database['public']['Tables']['variant_attribute_values']['Insert'];
+export type VariantAttributeValueUpdate = Database['public']['Tables']['variant_attribute_values']['Update'];
+export type ProductVariantV2Insert = Database['public']['Tables']['product_variants_v2']['Insert'];
+export type ProductVariantV2Update = Database['public']['Tables']['product_variants_v2']['Update'];
+export type VariantAttributeAssignmentInsert = Database['public']['Tables']['variant_attribute_assignments']['Insert'];
+export type VariantAttributeAssignmentUpdate = Database['public']['Tables']['variant_attribute_assignments']['Update'];
+export type OperationVariantAttributeInsert = Database['public']['Tables']['operation_variant_attributes']['Insert'];
+export type OperationVariantAttributeUpdate = Database['public']['Tables']['operation_variant_attributes']['Update'];
+export type WorkLogAttributeInsert = Database['public']['Tables']['work_log_attributes']['Insert'];
+export type WorkLogAttributeUpdate = Database['public']['Tables']['work_log_attributes']['Update'];
 
 // 結合したデータ型（実績一覧表示用）
 export interface WorkLogWithDetails extends WorkLog {
@@ -302,4 +477,14 @@ export interface WorkLogWithDetails extends WorkLog {
 // BOMと部品情報を結合した型
 export interface BOMWithPart extends BOM {
   consumed_part_name: string;
+}
+
+// バリエーション属性値と属性情報を結合した型
+export interface VariantAttributeValueWithAttribute extends VariantAttributeValue {
+  attribute_name: string;
+}
+
+// 商品バリエーションと属性値を結合した型
+export interface ProductVariantV2WithAttributes extends ProductVariantV2 {
+  attributes: VariantAttributeValueWithAttribute[];
 }

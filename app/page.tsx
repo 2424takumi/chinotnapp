@@ -2,19 +2,29 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Worker, Part, Operation, ProductVariant, SkinDesign } from '@/lib/types/database';
+import type {
+  Worker,
+  Part,
+  Operation,
+  VariantAttribute,
+  VariantAttributeValue
+} from '@/lib/types/database';
 
 export default function Home() {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
   const [operations, setOperations] = useState<Operation[]>([]);
-  const [variants, setVariants] = useState<ProductVariant[]>([]);
-  const [skinDesigns, setSkinDesigns] = useState<SkinDesign[]>([]);
+
+  // 工程に紐づく属性と属性値
+  const [operationAttributes, setOperationAttributes] = useState<VariantAttribute[]>([]);
+  const [attributeValues, setAttributeValues] = useState<VariantAttributeValue[]>([]);
 
   const [selectedWorker, setSelectedWorker] = useState<string | null>(null);
   const [selectedPart, setSelectedPart] = useState<string | null>(null);
   const [selectedOperation, setSelectedOperation] = useState<string | null>(null);
-  const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
+
+  // 属性値の選択状態（attribute_id => value_id）
+  const [selectedAttributeValues, setSelectedAttributeValues] = useState<Record<string, string>>({});
 
   const [hours, setHours] = useState<string>('0');
   const [minutes, setMinutes] = useState<string>('0');
@@ -23,7 +33,7 @@ export default function Home() {
   const [note, setNote] = useState<string>('');
   const [workDate, setWorkDate] = useState<string>(
     new Date().toISOString().split('T')[0]
-  ); // デフォルトは今日
+  );
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -37,11 +47,21 @@ export default function Home() {
   useEffect(() => {
     if (selectedPart) {
       fetchOperations(selectedPart);
-      fetchVariants(selectedPart);
-      setSelectedOperation(null); // 工程リセット
-      setSelectedVariant(null); // バリエーションリセット
+      setSelectedOperation(null);
+      setSelectedAttributeValues({});
     }
   }, [selectedPart]);
+
+  // 工程選択時に属性を取得
+  useEffect(() => {
+    if (selectedOperation) {
+      fetchOperationAttributes(selectedOperation);
+    } else {
+      setOperationAttributes([]);
+      setAttributeValues([]);
+      setSelectedAttributeValues({});
+    }
+  }, [selectedOperation]);
 
   const fetchMasterData = async () => {
     try {
@@ -72,18 +92,34 @@ export default function Home() {
     }
   };
 
-  const fetchVariants = async (partId: string) => {
+  const fetchOperationAttributes = async (operationId: string) => {
     try {
-      const { data } = await supabase
-        .from('product_variants')
-        .select('*, skin_designs(name)')
-        .eq('base_part_id', partId)
-        .eq('active', true)
-        .order('order_index');
+      // 工程に紐づく属性を取得
+      const { data: opAttrData } = await supabase
+        .from('operation_variant_attributes')
+        .select('*, variant_attributes(*)')
+        .eq('operation_id', operationId);
 
-      if (data) setVariants(data as any);
+      if (opAttrData && opAttrData.length > 0) {
+        const attributes = opAttrData.map((oa: any) => oa.variant_attributes);
+        setOperationAttributes(attributes);
+
+        // 属性値を取得
+        const attributeIds = attributes.map(attr => attr.attribute_id);
+        const { data: valuesData } = await supabase
+          .from('variant_attribute_values')
+          .select('*')
+          .in('attribute_id', attributeIds)
+          .eq('active', true)
+          .order('order_index');
+
+        if (valuesData) setAttributeValues(valuesData);
+      } else {
+        setOperationAttributes([]);
+        setAttributeValues([]);
+      }
     } catch (error) {
-      console.error('バリエーション取得エラー:', error);
+      console.error('属性取得エラー:', error);
     }
   };
 
@@ -95,6 +131,20 @@ export default function Home() {
     if (!selectedWorker || !selectedPart || !selectedOperation) {
       setMessage({ type: 'error', text: '作業者・部品・工程を選択してください' });
       return;
+    }
+
+    // 工程に紐づく属性がある場合、全て選択されているかチェック
+    if (operationAttributes.length > 0) {
+      const unselectedAttrs = operationAttributes.filter(
+        attr => !selectedAttributeValues[attr.attribute_id]
+      );
+      if (unselectedAttrs.length > 0) {
+        setMessage({
+          type: 'error',
+          text: `${unselectedAttrs.map(a => a.name).join('、')}を選択してください`
+        });
+        return;
+      }
     }
 
     const durationMinutes = parseInt(hours) * 60 + parseInt(minutes);
@@ -124,14 +174,13 @@ export default function Home() {
     // 保存
     setLoading(true);
     try {
-      // 1. BOMをチェック：この工程で消費する部品があるか確認
+      // 1. BOMをチェック
       const { data: bomData } = await supabase
         .from('bom')
         .select('*, consumed_part:parts!consumed_part_id(name)')
         .eq('operation_id', selectedOperation);
 
       // 2. work_logを保存
-      // @ts-ignore
       const { data: workLogData, error: workLogError } = await supabase
         .from('work_logs')
         .insert({
@@ -143,14 +192,28 @@ export default function Home() {
           loss_quantity: loss,
           note: note || null,
           work_date: workDate,
-          variant_id: selectedVariant || null,
+          variant_id: null, // 新システムでは使用しない
         })
         .select('log_id')
         .single();
 
       if (workLogError) throw workLogError;
 
-      // 3. BOMがある場合、消費記録を作成
+      // 3. 選択された属性値を work_log_attributes に保存
+      if (workLogData && Object.keys(selectedAttributeValues).length > 0) {
+        const attributeInserts = Object.values(selectedAttributeValues).map(valueId => ({
+          work_log_id: workLogData.log_id,
+          value_id: valueId
+        }));
+
+        const { error: attrError } = await supabase
+          .from('work_log_attributes')
+          .insert(attributeInserts);
+
+        if (attrError) throw attrError;
+      }
+
+      // 4. BOMがある場合、消費記録を作成
       if (bomData && bomData.length > 0 && workLogData) {
         const consumptions = bomData.map((bom) => ({
           work_log_id: workLogData.log_id,
@@ -158,7 +221,6 @@ export default function Home() {
           consumed_quantity: bom.quantity_per_unit * qty,
         }));
 
-        // @ts-ignore
         const { error: consumptionError } = await supabase
           .from('bom_consumption')
           .insert(consumptions);
@@ -168,19 +230,20 @@ export default function Home() {
 
       setMessage({ type: 'success', text: '保存しました' });
 
-      // フォームを完全にリセット
+      // フォームをリセット
       setSelectedWorker(null);
       setSelectedPart(null);
       setSelectedOperation(null);
-      setSelectedVariant(null);
+      setSelectedAttributeValues({});
       setOperations([]);
-      setVariants([]);
+      setOperationAttributes([]);
+      setAttributeValues([]);
       setHours('0');
       setMinutes('0');
       setQuantity('');
       setLossQuantity('0');
       setNote('');
-      setWorkDate(new Date().toISOString().split('T')[0]); // 今日にリセット
+      setWorkDate(new Date().toISOString().split('T')[0]);
 
       // 成功メッセージを3秒後に消す
       setTimeout(() => setMessage(null), 3000);
@@ -322,42 +385,45 @@ export default function Home() {
             </div>
           )}
 
-          {/* 商品バリエーション選択 */}
-          {selectedPart && variants.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                商品バリエーション（任意）
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {variants.map((variant: any) => (
-                  <button
-                    key={variant.variant_id}
-                    type="button"
-                    onClick={() => setSelectedVariant(variant.variant_id)}
-                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
-                      selectedVariant === variant.variant_id
-                        ? 'bg-orange-600 text-white border-orange-600'
-                        : 'bg-white text-gray-700 border-gray-300 hover:border-orange-400'
-                    }`}
-                  >
-                    <div>{variant.display_name}</div>
-                    {variant.skin_designs?.name && (
-                      <div className="text-xs mt-1 opacity-80">
-                        {variant.skin_designs.name}
-                      </div>
+          {/* 属性値選択（工程に紐づく属性がある場合のみ表示） */}
+          {selectedOperation && operationAttributes.length > 0 && (
+            <div className="space-y-4">
+              {operationAttributes.map((attribute) => (
+                <div key={attribute.attribute_id}>
+                  <label className="block text-sm font-medium mb-2">
+                    {attribute.name}
+                    {attribute.description && (
+                      <span className="text-xs text-gray-500 ml-2">({attribute.description})</span>
                     )}
-                  </button>
-                ))}
-              </div>
-              {selectedVariant && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedVariant(null)}
-                  className="mt-2 text-sm text-gray-600 hover:text-gray-800"
-                >
-                  選択解除
-                </button>
-              )}
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {attributeValues
+                      .filter(v => v.attribute_id === attribute.attribute_id)
+                      .map((value) => (
+                        <button
+                          key={value.value_id}
+                          type="button"
+                          onClick={() => setSelectedAttributeValues(prev => ({
+                            ...prev,
+                            [attribute.attribute_id]: value.value_id
+                          }))}
+                          className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                            selectedAttributeValues[attribute.attribute_id] === value.value_id
+                              ? 'bg-orange-600 text-white border-orange-600'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-orange-400'
+                          }`}
+                        >
+                          <div>{value.name}</div>
+                          {value.description && (
+                            <div className="text-xs mt-1 opacity-80">
+                              {value.description}
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
