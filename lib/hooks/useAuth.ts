@@ -14,39 +14,31 @@ export function useAuth() {
   useEffect(() => {
     // 初回ロード時のユーザー取得
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-      if (user) {
-        // ワーカー情報を取得
-        const { data: workerData } = await supabase
-          .from('workers')
-          .select('*')
-          .eq('auth_user_id', user.id)
-          .eq('is_authenticated', true)
-          .single()
+        if (userError) {
+          console.error('ユーザー取得エラー:', userError)
+          setUser(null)
+          setWorker(null)
+          setLoading(false)
+          return
+        }
 
-        setWorker(workerData)
-      }
+        setUser(user)
 
-      setLoading(false)
-    }
-
-    getUser()
-
-    // 認証状態の変更を監視
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null)
-
-        if (session?.user) {
+        if (user) {
           // ワーカー情報を取得
-          const { data: workerData } = await supabase
+          const { data: workerData, error: workerError } = await supabase
             .from('workers')
             .select('*')
-            .eq('auth_user_id', session.user.id)
+            .eq('auth_user_id', user.id)
             .eq('is_authenticated', true)
-            .single()
+            .maybeSingle()  // single()の代わりにmaybeSingle()を使用
+
+          if (workerError) {
+            console.error('ワーカー情報取得エラー:', workerError)
+          }
 
           setWorker(workerData)
         } else {
@@ -54,6 +46,46 @@ export function useAuth() {
         }
 
         setLoading(false)
+      } catch (error) {
+        console.error('useAuth getUser エラー:', error)
+        setUser(null)
+        setWorker(null)
+        setLoading(false)
+      }
+    }
+
+    getUser()
+
+    // 認証状態の変更を監視
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        try {
+          setUser(session?.user ?? null)
+
+          if (session?.user) {
+            // ワーカー情報を取得
+            const { data: workerData, error: workerError } = await supabase
+              .from('workers')
+              .select('*')
+              .eq('auth_user_id', session.user.id)
+              .eq('is_authenticated', true)
+              .maybeSingle()  // single()の代わりにmaybeSingle()を使用
+
+            if (workerError) {
+              console.error('ワーカー情報取得エラー:', workerError)
+            }
+
+            setWorker(workerData)
+          } else {
+            setWorker(null)
+          }
+
+          setLoading(false)
+        } catch (error) {
+          console.error('useAuth onAuthStateChange エラー:', error)
+          setWorker(null)
+          setLoading(false)
+        }
       }
     )
 

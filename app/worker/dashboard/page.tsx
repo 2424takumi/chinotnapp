@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { AuthGuard } from '@/components/AuthGuard'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { signOut } from '@/lib/auth'
@@ -25,20 +25,20 @@ function DashboardContent() {
   const [initialLoading, setInitialLoading] = useState(true)
   const [mode, setMode] = useState<'timer' | 'manual'>('timer')
 
-  useEffect(() => {
-    if (worker) {
-      checkActiveSession()
-    }
-  }, [worker])
-
-  const checkActiveSession = async () => {
+  const checkActiveSession = useCallback(async () => {
     if (!worker) return
 
     setInitialLoading(true)
     const { data } = await getActiveSession(worker.worker_id)
     setActiveSession(data)
     setInitialLoading(false)
-  }
+  }, [worker])
+
+  useEffect(() => {
+    if (worker) {
+      checkActiveSession()
+    }
+  }, [worker, checkActiveSession])
 
   const handleStartSession = async (params: {
     partId: string
