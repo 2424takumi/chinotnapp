@@ -1,15 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { signInWithEmail } from '@/lib/auth'
+import { useAuth } from '@/lib/hooks/useAuth'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { user, worker, loading: authLoading } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // 既にログイン済みの場合はダッシュボードにリダイレクト
+  useEffect(() => {
+    if (!authLoading && user && worker) {
+      router.push('/worker/dashboard')
+    }
+  }, [authLoading, user, worker, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -34,6 +43,18 @@ export default function LoginPage() {
       setError('予期しないエラーが発生しました。')
       setLoading(false)
     }
+  }
+
+  // 認証チェック中またはリダイレクト中はローディング表示
+  if (authLoading || (user && worker)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">読み込み中...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -107,10 +128,10 @@ export default function LoginPage() {
 
           <div className="text-center">
             <a
-              href="/"
+              href="/admin"
               className="text-sm text-indigo-600 hover:text-indigo-500"
             >
-              管理画面に戻る
+              管理画面へ
             </a>
           </div>
         </form>

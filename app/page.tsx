@@ -43,10 +43,16 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // ログイン済みの場合はダッシュボードにリダイレクト
+  // 認証状態に応じてリダイレクト
   useEffect(() => {
-    if (!authLoading && user && worker) {
-      router.push('/worker/dashboard');
+    if (!authLoading) {
+      if (user && worker) {
+        // ログイン済みの場合はダッシュボードへ
+        router.push('/worker/dashboard');
+      } else {
+        // 未ログインの場合はログイン画面へ
+        router.push('/login');
+      }
     }
   }, [authLoading, user, worker, router]);
 
@@ -270,8 +276,8 @@ export default function Home() {
   const getSelectedWorkerName = () => workers.find(w => w.worker_id === selectedWorker)?.name || '';
   const getSelectedPartName = () => parts.find(p => p.part_id === selectedPart)?.name || '';
 
-  // 認証チェック中の場合はローディング表示
-  if (authLoading) {
+  // 認証チェック中またはリダイレクト中はローディング表示
+  if (authLoading || user !== null || worker !== null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -280,11 +286,6 @@ export default function Home() {
         </div>
       </div>
     );
-  }
-
-  // ログイン済みの場合は何も表示しない（リダイレクト処理中）
-  if (user && worker) {
-    return null;
   }
 
   return (
