@@ -5,11 +5,13 @@ import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { Worker } from '@/lib/types/database'
 
+// コンポーネント外でクライアントを作成
+const supabase = createClient()
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [worker, setWorker] = useState<Worker | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
     // 初回ロード時のユーザー取得
