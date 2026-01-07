@@ -1,7 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from './types/database';
+// 古いファイル - 新しい lib/supabase/client.ts を使用してください
+// このファイルは後方互換性のために残されています
+import { createClient } from './supabase/client'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
-
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient()
