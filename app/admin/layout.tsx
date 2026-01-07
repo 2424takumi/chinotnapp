@@ -13,10 +13,10 @@ export default function AdminLayout({
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">管理画面</h1>
             <Link
-              href="/"
+              href="/worker/dashboard"
               className="text-sm text-blue-600 hover:underline"
             >
-              入力画面へ戻る
+              作業画面へ戻る
             </Link>
           </div>
         </div>
