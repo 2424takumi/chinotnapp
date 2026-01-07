@@ -16,6 +16,9 @@ export interface Database {
           name: string
           order_index: number
           active: boolean
+          auth_user_id: string | null
+          email: string | null
+          is_authenticated: boolean
           created_at: string
           updated_at: string
         }
@@ -24,6 +27,9 @@ export interface Database {
           name: string
           order_index?: number
           active?: boolean
+          auth_user_id?: string | null
+          email?: string | null
+          is_authenticated?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -32,6 +38,9 @@ export interface Database {
           name?: string
           order_index?: number
           active?: boolean
+          auth_user_id?: string | null
+          email?: string | null
+          is_authenticated?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -107,6 +116,7 @@ export interface Database {
           is_deleted: boolean
           work_date: string
           variant_id: string | null
+          session_id: string | null
           created_at: string
           updated_at: string
           updated_by: string | null
@@ -123,6 +133,7 @@ export interface Database {
           is_deleted?: boolean
           work_date?: string
           variant_id?: string | null
+          session_id?: string | null
           created_at?: string
           updated_at?: string
           updated_by?: string | null
@@ -139,6 +150,7 @@ export interface Database {
           is_deleted?: boolean
           work_date?: string
           variant_id?: string | null
+          session_id?: string | null
           created_at?: string
           updated_at?: string
           updated_by?: string | null
@@ -413,6 +425,67 @@ export interface Database {
           created_at?: string
         }
       }
+      work_sessions: {
+        Row: {
+          session_id: string
+          worker_id: string
+          part_id: string
+          operation_id: string
+          start_time: string
+          end_time: string | null
+          work_date: string
+          status: 'active' | 'paused' | 'completed' | 'abandoned'
+          work_log_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          session_id?: string
+          worker_id: string
+          part_id: string
+          operation_id: string
+          start_time?: string
+          end_time?: string | null
+          work_date?: string
+          status?: 'active' | 'paused' | 'completed' | 'abandoned'
+          work_log_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          session_id?: string
+          worker_id?: string
+          part_id?: string
+          operation_id?: string
+          start_time?: string
+          end_time?: string | null
+          work_date?: string
+          status?: 'active' | 'paused' | 'completed' | 'abandoned'
+          work_log_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      work_session_attributes: {
+        Row: {
+          session_attribute_id: string
+          session_id: string
+          value_id: string
+          created_at: string
+        }
+        Insert: {
+          session_attribute_id?: string
+          session_id: string
+          value_id: string
+          created_at?: string
+        }
+        Update: {
+          session_attribute_id?: string
+          session_id?: string
+          value_id?: string
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -443,6 +516,8 @@ export type ProductVariantV2 = Database['public']['Tables']['product_variants_v2
 export type VariantAttributeAssignment = Database['public']['Tables']['variant_attribute_assignments']['Row'];
 export type OperationVariantAttribute = Database['public']['Tables']['operation_variant_attributes']['Row'];
 export type WorkLogAttribute = Database['public']['Tables']['work_log_attributes']['Row'];
+export type WorkSession = Database['public']['Tables']['work_sessions']['Row'];
+export type WorkSessionAttribute = Database['public']['Tables']['work_session_attributes']['Row'];
 
 export type WorkLogInsert = Database['public']['Tables']['work_logs']['Insert'];
 export type WorkLogUpdate = Database['public']['Tables']['work_logs']['Update'];
@@ -466,6 +541,10 @@ export type OperationVariantAttributeInsert = Database['public']['Tables']['oper
 export type OperationVariantAttributeUpdate = Database['public']['Tables']['operation_variant_attributes']['Update'];
 export type WorkLogAttributeInsert = Database['public']['Tables']['work_log_attributes']['Insert'];
 export type WorkLogAttributeUpdate = Database['public']['Tables']['work_log_attributes']['Update'];
+export type WorkSessionInsert = Database['public']['Tables']['work_sessions']['Insert'];
+export type WorkSessionUpdate = Database['public']['Tables']['work_sessions']['Update'];
+export type WorkSessionAttributeInsert = Database['public']['Tables']['work_session_attributes']['Insert'];
+export type WorkSessionAttributeUpdate = Database['public']['Tables']['work_session_attributes']['Update'];
 
 // 結合したデータ型（実績一覧表示用）
 export interface WorkLogWithDetails extends WorkLog {

@@ -23,8 +23,7 @@ interface WorkLogDetail {
   loss_quantity: number;
   note: string | null;
   work_date: string;
-  variant_id: string | null;
-  variant_display_name: string | null;
+  session_id: string | null;
   attribute_values: AttributeValueInfo[];
   created_at: string;
   updated_at: string;
@@ -71,8 +70,7 @@ export default function AdminLogsPage() {
           *,
           workers(name),
           parts(name),
-          operations(name),
-          product_variants(display_name)
+          operations(name)
         `)
         .eq('is_deleted', false)
         .order('created_at', { ascending: false });
@@ -120,8 +118,7 @@ export default function AdminLogsPage() {
             loss_quantity: log.loss_quantity,
             note: log.note,
             work_date: log.work_date,
-            variant_id: log.variant_id,
-            variant_display_name: log.product_variants?.display_name || null,
+            session_id: log.session_id,
             attribute_values: attributeValues,
             created_at: log.created_at,
             updated_at: log.updated_at,
@@ -362,11 +359,10 @@ export default function AdminLogsPage() {
                         </div>
                       </div>
                     )}
-                    {log.variant_display_name && (
+                    {log.session_id && (
                       <div className="col-span-2">
-                        <span className="text-gray-600">バリエーション:</span>{' '}
-                        <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded text-xs">
-                          {log.variant_display_name}
+                        <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
+                          スタート/ストップ記録
                         </span>
                       </div>
                     )}

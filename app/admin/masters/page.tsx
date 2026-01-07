@@ -115,6 +115,10 @@ function WorkersTab() {
   const [name, setName] = useState('');
   const [orderIndex, setOrderIndex] = useState('0');
   const [active, setActive] = useState(true);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authWorker, setAuthWorker] = useState<Worker | null>(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
     fetchWorkers();
@@ -175,6 +179,57 @@ function WorkersTab() {
     setName('');
     setOrderIndex('0');
     setActive(true);
+  };
+
+  const handleSetupAuth = (worker: Worker) => {
+    setAuthWorker(worker);
+    setEmail(worker.email || '');
+    setPassword('');
+    setShowAuthModal(true);
+  };
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!authWorker) return;
+
+    try {
+      // APIルートを呼び出してアカウントを作成
+      const response = await fetch('/api/admin/create-worker-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          workerId: authWorker.worker_id,
+          email,
+          password,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'アカウント作成に失敗しました');
+      }
+
+      alert('アカウントを設定しました');
+      setShowAuthModal(false);
+      setAuthWorker(null);
+      setEmail('');
+      setPassword('');
+      fetchWorkers();
+    } catch (error: any) {
+      console.error('アカウント設定エラー:', error);
+      alert(`アカウント設定に失敗しました: ${error.message}`);
+    }
+  };
+
+  const handleAuthCancel = () => {
+    setShowAuthModal(false);
+    setAuthWorker(null);
+    setEmail('');
+    setPassword('');
   };
 
   return (
@@ -245,6 +300,8 @@ function WorkersTab() {
             <tr>
               <th className="px-4 py-3 text-left">名前</th>
               <th className="px-4 py-3 text-left">表示順</th>
+              <th className="px-4 py-3 text-left">メールアドレス</th>
+              <th className="px-4 py-3 text-left">認証</th>
               <th className="px-4 py-3 text-left">状態</th>
               <th className="px-4 py-3 text-center">操作</th>
             </tr>
@@ -254,6 +311,20 @@ function WorkersTab() {
               <tr key={worker.worker_id}>
                 <td className="px-4 py-3">{worker.name}</td>
                 <td className="px-4 py-3">{worker.order_index}</td>
+                <td className="px-4 py-3 text-sm text-gray-600">
+                  {worker.email || '-'}
+                </td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`px-2 py-1 rounded text-xs ${
+                      worker.is_authenticated
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    {worker.is_authenticated ? 'ログイン可' : '未設定'}
+                  </span>
+                </td>
                 <td className="px-4 py-3">
                   <span
                     className={`px-2 py-1 rounded text-xs ${
@@ -263,19 +334,82 @@ function WorkersTab() {
                     {worker.active ? '有効' : '無効'}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-center">
+                <td className="px-4 py-3 text-center space-x-2">
                   <button
                     onClick={() => handleEdit(worker)}
                     className="text-blue-600 hover:text-blue-800 text-sm"
                   >
                     編集
                   </button>
+                  {!worker.is_authenticated && (
+                    <button
+                      onClick={() => handleSetupAuth(worker)}
+                      className="text-green-600 hover:text-green-800 text-sm"
+                    >
+                      アカウント設定
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* アカウント設定モーダル */}
+      {showAuthModal && authWorker && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium mb-4">
+              ログインアカウント設定: {authWorker.name}
+            </h3>
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  メールアドレス
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="worker@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  初期パスワード
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="6文字以上"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={handleAuthCancel}
+                  className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  設定
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

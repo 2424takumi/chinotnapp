@@ -269,12 +269,20 @@ export default function Home() {
               <p className="text-sm mt-1">作業者: {getSelectedWorkerName()}</p>
             )}
           </div>
-          <a
-            href="/admin"
-            className="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors"
-          >
-            管理画面
-          </a>
+          <div className="flex gap-2">
+            <a
+              href="/login"
+              className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+            >
+              作業者ログイン
+            </a>
+            <a
+              href="/admin"
+              className="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors"
+            >
+              管理画面
+            </a>
+          </div>
         </div>
       </div>
 
