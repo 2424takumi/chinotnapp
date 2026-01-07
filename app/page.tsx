@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/hooks/useAuth';
 import type {
   Worker,
   Part,
@@ -11,6 +13,9 @@ import type {
 } from '@/lib/types/database';
 
 export default function Home() {
+  const router = useRouter();
+  const { user, worker, loading: authLoading } = useAuth();
+
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
   const [operations, setOperations] = useState<Operation[]>([]);
@@ -37,6 +42,13 @@ export default function Home() {
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // ログイン済みの場合はダッシュボードにリダイレクト
+  useEffect(() => {
+    if (!authLoading && user && worker) {
+      router.push('/worker/dashboard');
+    }
+  }, [authLoading, user, worker, router]);
 
   // マスタデータ取得
   useEffect(() => {
@@ -257,6 +269,23 @@ export default function Home() {
 
   const getSelectedWorkerName = () => workers.find(w => w.worker_id === selectedWorker)?.name || '';
   const getSelectedPartName = () => parts.find(p => p.part_id === selectedPart)?.name || '';
+
+  // 認証チェック中の場合はローディング表示
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ログイン済みの場合は何も表示しない（リダイレクト処理中）
+  if (user && worker) {
+    return null;
+  }
 
   return (
     <main className="min-h-screen bg-gray-50 pb-20 overflow-x-hidden">

@@ -60,21 +60,29 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
   }, [selectedOperationId])
 
   const fetchParts = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('parts')
       .select('*')
       .eq('active', true)
       .order('order_index')
+    if (error) {
+      console.error('部品取得エラー:', error)
+      alert(`部品の取得に失敗しました: ${error.message}`)
+    }
     if (data) setParts(data)
   }
 
   const fetchOperations = async (partId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('operations')
       .select('*')
       .eq('part_id', partId)
       .eq('active', true)
       .order('order_index')
+    if (error) {
+      console.error('工程取得エラー:', error)
+      alert(`工程の取得に失敗しました: ${error.message}`)
+    }
     if (data) setOperations(data)
   }
 
