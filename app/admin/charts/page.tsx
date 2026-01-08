@@ -23,8 +23,10 @@ interface WorkLog {
   worker_name: string;
   part_id: string;
   part_name: string;
+  part_order_index: number;
   operation_id: string;
   operation_name: string;
+  operation_order_index: number;
   duration_minutes: number;
   quantity: number;
   loss_quantity: number;
@@ -78,8 +80,8 @@ export default function ChartsPage() {
         .select(`
           *,
           workers(name),
-          parts(name),
-          operations(name)
+          parts(name, order_index),
+          operations(name, order_index)
         `)
         .eq('is_deleted', false)
         .gte('created_at', `${dateFrom}T00:00:00`)
@@ -96,8 +98,10 @@ export default function ChartsPage() {
           worker_name: log.workers?.name || '不明',
           part_id: log.part_id,
           part_name: log.parts?.name || '不明',
+          part_order_index: log.parts?.order_index ?? 999,
           operation_id: log.operation_id,
           operation_name: log.operations?.name || '不明',
+          operation_order_index: log.operations?.order_index ?? 999,
           duration_minutes: log.duration_minutes,
           quantity: log.quantity,
           loss_quantity: log.loss_quantity,
@@ -173,7 +177,7 @@ export default function ChartsPage() {
   // グラフ2: 人別×工程別の生産性（分/良品）
   const getProductivityMatrix = () => {
     const matrix = new Map<string, Map<string, { minutes: number; good: number }>>();
-    const operationPartMap = new Map<string, string>(); // 工程→部品名のマッピング
+    const operationInfoMap = new Map<string, { partName: string; partOrder: number; opOrder: number }>(); // 工程→部品情報のマッピング
 
     logs.forEach((log) => {
       const key = `${log.worker_name}|${log.operation_name}`;
@@ -186,18 +190,35 @@ export default function ChartsPage() {
       current.good += log.quantity - log.loss_quantity;
       stats.set('total', current);
 
-      // 工程と部品のマッピングを保存
-      if (!operationPartMap.has(log.operation_name)) {
-        operationPartMap.set(log.operation_name, log.part_name);
+      // 工程と部品の情報を保存
+      if (!operationInfoMap.has(log.operation_name)) {
+        operationInfoMap.set(log.operation_name, {
+          partName: log.part_name,
+          partOrder: log.part_order_index,
+          opOrder: log.operation_order_index,
+        });
       }
     });
 
     const allWorkers = Array.from(new Set(logs.map((l) => l.worker_name)));
-    const allOperations = Array.from(new Set(logs.map((l) => l.operation_name)));
+
+    // 工程を部品順→工程順でソート
+    const allOperations = Array.from(new Set(logs.map((l) => l.operation_name))).sort((a, b) => {
+      const infoA = operationInfoMap.get(a)!;
+      const infoB = operationInfoMap.get(b)!;
+
+      // まず部品の順序で比較
+      if (infoA.partOrder !== infoB.partOrder) {
+        return infoA.partOrder - infoB.partOrder;
+      }
+      // 同じ部品なら工程の順序で比較
+      return infoA.opOrder - infoB.opOrder;
+    });
 
     const tableData: any[] = [];
     allOperations.forEach((op) => {
-      const row: any = { operation: op, partName: operationPartMap.get(op) || '' };
+      const info = operationInfoMap.get(op)!;
+      const row: any = { operation: op, partName: info.partName };
       allWorkers.forEach((worker) => {
         const key = `${worker}|${op}`;
         const stats = matrix.get(key)?.get('total');
@@ -215,11 +236,17 @@ export default function ChartsPage() {
 
   // グラフ4: 工程別のロス率
   const getLossRateByOperation = () => {
-    const operationStats = new Map<string, { quantity: number; loss: number; partName: string }>();
+    const operationStats = new Map<string, { quantity: number; loss: number; partName: string; partOrder: number; opOrder: number }>();
 
     logs.forEach((log) => {
       if (!operationStats.has(log.operation_name)) {
-        operationStats.set(log.operation_name, { quantity: 0, loss: 0, partName: log.part_name });
+        operationStats.set(log.operation_name, {
+          quantity: 0,
+          loss: 0,
+          partName: log.part_name,
+          partOrder: log.part_order_index,
+          opOrder: log.operation_order_index,
+        });
       }
       const stats = operationStats.get(log.operation_name)!;
       stats.quantity += log.quantity;
@@ -230,10 +257,18 @@ export default function ChartsPage() {
       .map(([operation, stats]) => ({
         operation,
         partName: stats.partName,
+        partOrder: stats.partOrder,
+        opOrder: stats.opOrder,
         lossRate: stats.quantity > 0 ? ((stats.loss / stats.quantity) * 100).toFixed(1) : 0,
         lossRateNum: stats.quantity > 0 ? (stats.loss / stats.quantity) * 100 : 0,
       }))
-      .sort((a, b) => b.lossRateNum - a.lossRateNum);
+      .sort((a, b) => {
+        // 部品順→工程順でソート
+        if (a.partOrder !== b.partOrder) {
+          return a.partOrder - b.partOrder;
+        }
+        return a.opOrder - b.opOrder;
+      });
 
     return chartData;
   };

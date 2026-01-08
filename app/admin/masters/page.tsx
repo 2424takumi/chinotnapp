@@ -1063,31 +1063,49 @@ function OperationsTab() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {filteredOperations.map((operation: any) => (
-              <tr key={operation.operation_id}>
-                <td className="px-4 py-3">{operation.parts?.name || getPartName(operation.part_id)}</td>
-                <td className="px-4 py-3">{operation.name}</td>
-                <td className="px-4 py-3">{operation.order_index}</td>
-                <td className="px-4 py-3">{operation.category || '—'}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-1 rounded text-xs ${
-                      operation.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {operation.active ? '有効' : '無効'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <button
-                    onClick={() => handleEdit(operation)}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    編集
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {filteredOperations.map((operation: any) => {
+              const partName = operation.parts?.name || getPartName(operation.part_id);
+              // 部品ごとの色を定義
+              const partColors: Record<string, string> = {
+                '棹': 'bg-blue-100 text-blue-800',
+                '胴': 'bg-green-100 text-green-800',
+                '糸巻き': 'bg-purple-100 text-purple-800',
+              };
+              const partColorClass = partColors[partName] || 'bg-gray-100 text-gray-800';
+
+              return (
+                <tr key={operation.operation_id}>
+                  <td className="px-4 py-3">{partName}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${partColorClass}`}>
+                        {partName}
+                      </span>
+                      <span>{operation.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">{operation.order_index}</td>
+                  <td className="px-4 py-3">{operation.category || '—'}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        operation.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {operation.active ? '有効' : '無効'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={() => handleEdit(operation)}
+                      className="text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                      編集
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
