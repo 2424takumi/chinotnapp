@@ -675,6 +675,9 @@ function OperationsTab() {
     try {
       let operationId = editing?.operation_id;
 
+      // 数値変換（安全に）
+      const consumptionQty = parseInt(consumptionQuantityPerUnit) || 1;
+
       if (editing) {
         // @ts-ignore
         const { error } = await supabase
@@ -686,11 +689,14 @@ function OperationsTab() {
             category: category || null,
             active,
             consumes_previous_operation: consumesPreviousOperation,
-            consumption_quantity_per_unit: parseInt(consumptionQuantityPerUnit),
+            consumption_quantity_per_unit: consumptionQty,
             inherit_attributes: inheritAttributes,
           })
           .eq('operation_id', editing.operation_id);
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase更新エラー:', error);
+          throw error;
+        }
       } else {
         // @ts-ignore
         const { data, error } = await supabase
@@ -702,12 +708,15 @@ function OperationsTab() {
             category: category || null,
             active,
             consumes_previous_operation: consumesPreviousOperation,
-            consumption_quantity_per_unit: parseInt(consumptionQuantityPerUnit),
+            consumption_quantity_per_unit: consumptionQty,
             inherit_attributes: inheritAttributes,
           })
           .select()
           .single();
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase挿入エラー:', error);
+          throw error;
+        }
         operationId = data.operation_id;
       }
 
