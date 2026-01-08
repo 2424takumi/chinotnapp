@@ -644,7 +644,7 @@ function OperationsTab() {
   const [selectedPartFilter, setSelectedPartFilter] = useState<string>('all');
   const [attributes, setAttributes] = useState<any[]>([]);
   const [selectedAttributeIds, setSelectedAttributeIds] = useState<string[]>([]);
-  const [consumesPreviousOperation, setConsumesPreviousOperation] = useState(false);
+  const [consumesPreviousOperation, setConsumesPreviousOperation] = useState(true);
   const [consumptionQuantityPerUnit, setConsumptionQuantityPerUnit] = useState('1');
   const [inheritAttributes, setInheritAttributes] = useState(true);
 
@@ -790,7 +790,7 @@ function OperationsTab() {
     setCategory('');
     setActive(true);
     setSelectedAttributeIds([]);
-    setConsumesPreviousOperation(false);
+    setConsumesPreviousOperation(true);
     setConsumptionQuantityPerUnit('1');
     setInheritAttributes(true);
   };
