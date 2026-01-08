@@ -79,6 +79,27 @@ export function VariantAttributesTab() {
     setActive(true);
   };
 
+  const handleDelete = async () => {
+    if (!editing) return;
+    if (!confirm(`バリエーション属性「${editing.name}」を削除しますか？`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('variant_attributes')
+        .delete()
+        .eq('attribute_id', editing.attribute_id);
+
+      if (error) throw error;
+
+      alert('削除しました');
+      handleCancel();
+      fetchAttributes();
+    } catch (error) {
+      console.error('削除エラー:', error);
+      alert('削除に失敗しました');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 p-4 rounded-lg">
@@ -144,13 +165,22 @@ export function VariantAttributesTab() {
               {editing ? '更新' : '追加'}
             </button>
             {editing && (
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-              >
-                キャンセル
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                >
+                  削除
+                </button>
+              </>
             )}
           </div>
         </form>
@@ -284,6 +314,27 @@ export function VariantAttributeValuesTab() {
     setActive(true);
   };
 
+  const handleDelete = async () => {
+    if (!editing) return;
+    if (!confirm(`属性値「${editing.name}」を削除しますか？`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('variant_attribute_values')
+        .delete()
+        .eq('value_id', editing.value_id);
+
+      if (error) throw error;
+
+      alert('削除しました');
+      handleCancel();
+      fetchValues();
+    } catch (error) {
+      console.error('削除エラー:', error);
+      alert('削除に失敗しました');
+    }
+  };
+
   const getAttributeName = (attributeId: string) => {
     return attributes.find((a) => a.attribute_id === attributeId)?.name || '';
   };
@@ -369,13 +420,22 @@ export function VariantAttributeValuesTab() {
               {editing ? '更新' : '追加'}
             </button>
             {editing && (
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-              >
-                キャンセル
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                >
+                  削除
+                </button>
+              </>
             )}
           </div>
         </form>
@@ -590,6 +650,36 @@ export function ProductVariantsV2Tab() {
     setSelectedValueIds([]);
   };
 
+  const handleDelete = async () => {
+    if (!editing) return;
+    if (!confirm(`商品バリエーション「${editing.display_name}」を削除しますか？`)) return;
+
+    try {
+      // まず関連する属性値割り当てを削除
+      const { error: assignmentError } = await supabase
+        .from('variant_attribute_assignments')
+        .delete()
+        .eq('variant_id', editing.variant_id);
+
+      if (assignmentError) throw assignmentError;
+
+      // 次にバリエーション本体を削除
+      const { error: variantError } = await supabase
+        .from('product_variants_v2')
+        .delete()
+        .eq('variant_id', editing.variant_id);
+
+      if (variantError) throw variantError;
+
+      alert('削除しました');
+      handleCancel();
+      fetchVariants();
+    } catch (error) {
+      console.error('削除エラー:', error);
+      alert('削除に失敗しました');
+    }
+  };
+
   const toggleValueSelection = (valueId: string) => {
     setSelectedValueIds(prev =>
       prev.includes(valueId)
@@ -724,13 +814,22 @@ export function ProductVariantsV2Tab() {
               {editing ? '更新' : '追加'}
             </button>
             {editing && (
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-              >
-                キャンセル
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                >
+                  削除
+                </button>
+              </>
             )}
           </div>
         </form>

@@ -6,14 +6,12 @@ import type {
   Worker,
   Part,
   Operation,
-  SkinDesign,
-  ProductVariant,
   Database
 } from '@/lib/types/database';
 import { VariantAttributesTab, VariantAttributeValuesTab, ProductVariantsV2Tab } from './variant-tabs';
 
 export default function MastersPage() {
-  const [activeTab, setActiveTab] = useState<'workers' | 'parts' | 'operations' | 'skin_designs' | 'variant_attributes' | 'variant_attribute_values' | 'product_variants_v2'>('workers');
+  const [activeTab, setActiveTab] = useState<'workers' | 'parts' | 'operations' | 'variant_attributes' | 'variant_attribute_values' | 'product_variants_v2'>('workers');
 
   return (
     <div className="space-y-6">
@@ -53,16 +51,6 @@ export default function MastersPage() {
             工程
           </button>
           <button
-            onClick={() => setActiveTab('skin_designs')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-              activeTab === 'skin_designs'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            皮デザイン
-          </button>
-          <button
             onClick={() => setActiveTab('variant_attributes')}
             className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'variant_attributes'
@@ -100,7 +88,6 @@ export default function MastersPage() {
         {activeTab === 'workers' && <WorkersTab />}
         {activeTab === 'parts' && <PartsTab />}
         {activeTab === 'operations' && <OperationsTab />}
-        {activeTab === 'skin_designs' && <SkinDesignsTab />}
         {activeTab === 'variant_attributes' && <VariantAttributesTab />}
         {activeTab === 'variant_attribute_values' && <VariantAttributeValuesTab />}
         {activeTab === 'product_variants_v2' && <ProductVariantsV2Tab />}
@@ -179,6 +166,27 @@ function WorkersTab() {
     setName('');
     setOrderIndex('0');
     setActive(true);
+  };
+
+  const handleDelete = async () => {
+    if (!editing) return;
+    if (!confirm(`作業者「${editing.name}」を削除しますか？`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('workers')
+        .delete()
+        .eq('worker_id', editing.worker_id);
+
+      if (error) throw error;
+
+      alert('削除しました');
+      handleCancel();
+      fetchWorkers();
+    } catch (error) {
+      console.error('削除エラー:', error);
+      alert('削除に失敗しました');
+    }
   };
 
   const handleSetupAuth = (worker: Worker) => {
@@ -281,13 +289,22 @@ function WorkersTab() {
               {editing ? '更新' : '追加'}
             </button>
             {editing && (
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-              >
-                キャンセル
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                >
+                  削除
+                </button>
+              </>
             )}
           </div>
         </form>
@@ -482,6 +499,27 @@ function PartsTab() {
     setActive(true);
   };
 
+  const handleDelete = async () => {
+    if (!editing) return;
+    if (!confirm(`部品「${editing.name}」を削除しますか？`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('parts')
+        .delete()
+        .eq('part_id', editing.part_id);
+
+      if (error) throw error;
+
+      alert('削除しました');
+      handleCancel();
+      fetchParts();
+    } catch (error) {
+      console.error('削除エラー:', error);
+      alert('削除に失敗しました');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* フォーム */}
@@ -531,13 +569,22 @@ function PartsTab() {
               {editing ? '更新' : '追加'}
             </button>
             {editing && (
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-              >
-                キャンセル
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                >
+                  削除
+                </button>
+              </>
             )}
           </div>
         </form>
@@ -595,10 +642,13 @@ function OperationsTab() {
   const [category, setCategory] = useState('');
   const [active, setActive] = useState(true);
   const [selectedPartFilter, setSelectedPartFilter] = useState<string>('all');
+  const [attributes, setAttributes] = useState<any[]>([]);
+  const [selectedAttributeIds, setSelectedAttributeIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetchParts();
     fetchOperations();
+    fetchAttributes();
   }, []);
 
   const fetchParts = async () => {
@@ -611,10 +661,17 @@ function OperationsTab() {
     if (data) setOperations(data as any);
   };
 
+  const fetchAttributes = async () => {
+    const { data } = await supabase.from('variant_attributes').select('*').eq('active', true).order('order_index');
+    if (data) setAttributes(data);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
+      let operationId = editing?.operation_id;
+
       if (editing) {
         // @ts-ignore
         const { error } = await supabase
@@ -630,7 +687,7 @@ function OperationsTab() {
         if (error) throw error;
       } else {
         // @ts-ignore
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('operations')
           .insert({
             part_id: partId,
@@ -638,8 +695,32 @@ function OperationsTab() {
             order_index: parseInt(orderIndex),
             category: category || null,
             active,
-          });
+          })
+          .select()
+          .single();
         if (error) throw error;
+        operationId = data.operation_id;
+      }
+
+      // 属性の紐付けを更新
+      if (operationId) {
+        // 既存の紐付けを削除
+        await supabase
+          .from('operation_variant_attributes')
+          .delete()
+          .eq('operation_id', operationId);
+
+        // 新しい紐付けを追加
+        if (selectedAttributeIds.length > 0) {
+          const inserts = selectedAttributeIds.map(attributeId => ({
+            operation_id: operationId,
+            attribute_id: attributeId,
+          }));
+          const { error: attrError } = await supabase
+            .from('operation_variant_attributes')
+            .insert(inserts);
+          if (attrError) throw attrError;
+        }
       }
 
       setPartId('');
@@ -647,6 +728,7 @@ function OperationsTab() {
       setOrderIndex('0');
       setCategory('');
       setActive(true);
+      setSelectedAttributeIds([]);
       setEditing(null);
       fetchOperations();
     } catch (error) {
@@ -655,13 +737,25 @@ function OperationsTab() {
     }
   };
 
-  const handleEdit = (operation: Operation) => {
+  const handleEdit = async (operation: Operation) => {
     setEditing(operation);
     setPartId(operation.part_id);
     setName(operation.name);
     setOrderIndex(operation.order_index.toString());
     setCategory(operation.category || '');
     setActive(operation.active);
+
+    // この工程に紐付いている属性を取得
+    const { data: operationAttrs } = await supabase
+      .from('operation_variant_attributes')
+      .select('attribute_id')
+      .eq('operation_id', operation.operation_id);
+
+    if (operationAttrs) {
+      setSelectedAttributeIds(operationAttrs.map(a => a.attribute_id));
+    } else {
+      setSelectedAttributeIds([]);
+    }
   };
 
   const handleCancel = () => {
@@ -671,6 +765,28 @@ function OperationsTab() {
     setOrderIndex('0');
     setCategory('');
     setActive(true);
+    setSelectedAttributeIds([]);
+  };
+
+  const handleDelete = async () => {
+    if (!editing) return;
+    if (!confirm(`工程「${editing.name}」を削除しますか？`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('operations')
+        .delete()
+        .eq('operation_id', editing.operation_id);
+
+      if (error) throw error;
+
+      alert('削除しました');
+      handleCancel();
+      fetchOperations();
+    } catch (error) {
+      console.error('削除エラー:', error);
+      alert('削除に失敗しました');
+    }
   };
 
   const getPartName = (partId: string) => {
@@ -758,6 +874,38 @@ function OperationsTab() {
               </label>
             </div>
           </div>
+
+          {/* 属性選択 */}
+          {attributes.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                使用する属性（この工程で記録する属性を選択）
+              </label>
+              <div className="bg-gray-50 p-3 rounded border flex flex-wrap gap-3">
+                {attributes.map((attr) => (
+                  <label key={attr.attribute_id} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedAttributeIds.includes(attr.attribute_id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedAttributeIds([...selectedAttributeIds, attr.attribute_id]);
+                        } else {
+                          setSelectedAttributeIds(selectedAttributeIds.filter(id => id !== attr.attribute_id));
+                        }
+                      }}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">{attr.name}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                例: 「皮はり」工程では「皮デザイン」属性を選択すると、作業記録時に皮デザインを選択できます
+              </p>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <button
               type="submit"
@@ -766,13 +914,22 @@ function OperationsTab() {
               {editing ? '更新' : '追加'}
             </button>
             {editing && (
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-              >
-                キャンセル
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                >
+                  削除
+                </button>
+              </>
             )}
           </div>
         </form>
@@ -839,459 +996,6 @@ function OperationsTab() {
                 <td className="px-4 py-3 text-center">
                   <button
                     onClick={() => handleEdit(operation)}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    編集
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function SkinDesignsTab() {
-  const [designs, setDesigns] = useState<SkinDesign[]>([]);
-  const [editing, setEditing] = useState<SkinDesign | null>(null);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [orderIndex, setOrderIndex] = useState('0');
-  const [active, setActive] = useState(true);
-
-  useEffect(() => {
-    fetchDesigns();
-  }, []);
-
-  const fetchDesigns = async () => {
-    const { data } = await supabase.from('skin_designs').select('*').order('order_index');
-    if (data) setDesigns(data);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      if (editing) {
-        const { error } = await supabase
-          .from('skin_designs')
-          .update({
-            name,
-            description: description || null,
-            order_index: parseInt(orderIndex),
-            active
-          })
-          .eq('skin_design_id', editing.skin_design_id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('skin_designs')
-          .insert({
-            name,
-            description: description || null,
-            order_index: parseInt(orderIndex),
-            active
-          });
-        if (error) throw error;
-      }
-
-      setName('');
-      setDescription('');
-      setOrderIndex('0');
-      setActive(true);
-      setEditing(null);
-      fetchDesigns();
-    } catch (error) {
-      console.error('保存エラー:', error);
-      alert('保存に失敗しました');
-    }
-  };
-
-  const handleEdit = (design: SkinDesign) => {
-    setEditing(design);
-    setName(design.name);
-    setDescription(design.description || '');
-    setOrderIndex(design.order_index.toString());
-    setActive(design.active);
-  };
-
-  const handleCancel = () => {
-    setEditing(null);
-    setName('');
-    setDescription('');
-    setOrderIndex('0');
-    setActive(true);
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="font-medium mb-4">
-          {editing ? '編集' : '新規皮デザイン'}
-        </h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm mb-1">名前</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm mb-1">説明</label>
-              <input
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm mb-1">表示順</label>
-              <input
-                type="number"
-                value={orderIndex}
-                onChange={(e) => setOrderIndex(e.target.value)}
-                required
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-            <div className="flex items-end">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={active}
-                  onChange={(e) => setActive(e.target.checked)}
-                  className="mr-2"
-                />
-                <span className="text-sm">有効</span>
-              </label>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            >
-              {editing ? '更新' : '追加'}
-            </button>
-            {editing && (
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-              >
-                キャンセル
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="px-4 py-3 text-left">名前</th>
-              <th className="px-4 py-3 text-left">説明</th>
-              <th className="px-4 py-3 text-left">表示順</th>
-              <th className="px-4 py-3 text-left">状態</th>
-              <th className="px-4 py-3 text-center">操作</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {designs.map((design) => (
-              <tr key={design.skin_design_id}>
-                <td className="px-4 py-3">{design.name}</td>
-                <td className="px-4 py-3">{design.description || '—'}</td>
-                <td className="px-4 py-3">{design.order_index}</td>
-                <td className="px-4 py-3">
-                  <span className={'px-2 py-1 rounded text-xs ' + (design.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')}>
-                    {design.active ? '有効' : '無効'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <button
-                    onClick={() => handleEdit(design)}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    編集
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function ProductVariantsTab() {
-  const [variants, setVariants] = useState<ProductVariant[]>([]);
-  const [parts, setParts] = useState<Part[]>([]);
-  const [designs, setDesigns] = useState<SkinDesign[]>([]);
-  const [editing, setEditing] = useState<ProductVariant | null>(null);
-  const [basePartId, setBasePartId] = useState('');
-  const [skinDesignId, setSkinDesignId] = useState('');
-  const [variantCode, setVariantCode] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [description, setDescription] = useState('');
-  const [orderIndex, setOrderIndex] = useState('0');
-  const [active, setActive] = useState(true);
-
-  useEffect(() => {
-    fetchParts();
-    fetchDesigns();
-    fetchVariants();
-  }, []);
-
-  const fetchParts = async () => {
-    const { data } = await supabase.from('parts').select('*').order('order_index');
-    if (data) setParts(data);
-  };
-
-  const fetchDesigns = async () => {
-    const { data } = await supabase.from('skin_designs').select('*').order('order_index');
-    if (data) setDesigns(data);
-  };
-
-  const fetchVariants = async () => {
-    const { data} = await supabase
-      .from('product_variants')
-      .select('*, parts(name), skin_designs(name)')
-      .order('order_index');
-    if (data) setVariants(data as any);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      if (editing) {
-        const { error } = await supabase
-          .from('product_variants')
-          .update({
-            base_part_id: basePartId,
-            skin_design_id: skinDesignId || null,
-            variant_code: variantCode,
-            display_name: displayName,
-            description: description || null,
-            order_index: parseInt(orderIndex),
-            active
-          })
-          .eq('variant_id', editing.variant_id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('product_variants')
-          .insert({
-            base_part_id: basePartId,
-            skin_design_id: skinDesignId || null,
-            variant_code: variantCode,
-            display_name: displayName,
-            description: description || null,
-            order_index: parseInt(orderIndex),
-            active
-          });
-        if (error) throw error;
-      }
-
-      setBasePartId('');
-      setSkinDesignId('');
-      setVariantCode('');
-      setDisplayName('');
-      setDescription('');
-      setOrderIndex('0');
-      setActive(true);
-      setEditing(null);
-      fetchVariants();
-    } catch (error) {
-      console.error('保存エラー:', error);
-      alert('保存に失敗しました');
-    }
-  };
-
-  const handleEdit = (variant: ProductVariant) => {
-    setEditing(variant);
-    setBasePartId(variant.base_part_id);
-    setSkinDesignId(variant.skin_design_id || '');
-    setVariantCode(variant.variant_code);
-    setDisplayName(variant.display_name);
-    setDescription(variant.description || '');
-    setOrderIndex(variant.order_index.toString());
-    setActive(variant.active);
-  };
-
-  const handleCancel = () => {
-    setEditing(null);
-    setBasePartId('');
-    setSkinDesignId('');
-    setVariantCode('');
-    setDisplayName('');
-    setDescription('');
-    setOrderIndex('0');
-    setActive(true);
-  };
-
-  const getPartName = (partId: string) => {
-    return parts.find((p) => p.part_id === partId)?.name || '';
-  };
-
-  const getDesignName = (designId: string | null) => {
-    if (!designId) return '—';
-    return designs.find((d) => d.skin_design_id === designId)?.name || '';
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="font-medium mb-4">
-          {editing ? '編集' : '新規商品バリエーション'}
-        </h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm mb-1">ベース部品</label>
-              <select
-                value={basePartId}
-                onChange={(e) => setBasePartId(e.target.value)}
-                required
-                className="w-full border rounded px-3 py-2"
-              >
-                <option value="">選択してください</option>
-                {parts.map((part) => (
-                  <option key={part.part_id} value={part.part_id}>
-                    {part.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm mb-1">皮デザイン</label>
-              <select
-                value={skinDesignId}
-                onChange={(e) => setSkinDesignId(e.target.value)}
-                className="w-full border rounded px-3 py-2"
-              >
-                <option value="">なし</option>
-                {designs.map((design) => (
-                  <option key={design.skin_design_id} value={design.skin_design_id}>
-                    {design.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm mb-1">バリエーションコード</label>
-              <input
-                type="text"
-                value={variantCode}
-                onChange={(e) => setVariantCode(e.target.value)}
-                required
-                placeholder="例: DOU-HANA-001"
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm mb-1">表示名</label>
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                required
-                placeholder="例: 胴（花柄）"
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm mb-1">説明</label>
-              <input
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm mb-1">表示順</label>
-              <input
-                type="number"
-                value={orderIndex}
-                onChange={(e) => setOrderIndex(e.target.value)}
-                required
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={active}
-                onChange={(e) => setActive(e.target.checked)}
-                className="mr-2"
-              />
-              <span className="text-sm">有効</span>
-            </label>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            >
-              {editing ? '更新' : '追加'}
-            </button>
-            {editing && (
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-              >
-                キャンセル
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-
-      <div className="bg-white rounded-lg shadow overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="px-4 py-3 text-left">コード</th>
-              <th className="px-4 py-3 text-left">表示名</th>
-              <th className="px-4 py-3 text-left">ベース部品</th>
-              <th className="px-4 py-3 text-left">皮デザイン</th>
-              <th className="px-4 py-3 text-left">説明</th>
-              <th className="px-4 py-3 text-left">表示順</th>
-              <th className="px-4 py-3 text-left">状態</th>
-              <th className="px-4 py-3 text-center">操作</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {variants.map((variant: any) => (
-              <tr key={variant.variant_id}>
-                <td className="px-4 py-3">{variant.variant_code}</td>
-                <td className="px-4 py-3">{variant.display_name}</td>
-                <td className="px-4 py-3">{variant.parts?.name || getPartName(variant.base_part_id)}</td>
-                <td className="px-4 py-3">{variant.skin_designs?.name || getDesignName(variant.skin_design_id)}</td>
-                <td className="px-4 py-3">{variant.description || '—'}</td>
-                <td className="px-4 py-3">{variant.order_index}</td>
-                <td className="px-4 py-3">
-                  <span className={'px-2 py-1 rounded text-xs ' + (variant.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')}>
-                    {variant.active ? '有効' : '無効'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <button
-                    onClick={() => handleEdit(variant)}
                     className="text-blue-600 hover:text-blue-800 text-sm"
                   >
                     編集

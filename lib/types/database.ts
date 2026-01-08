@@ -486,6 +486,55 @@ export interface Database {
           created_at?: string
         }
       }
+      inventory_adjustments: {
+        Row: {
+          adjustment_id: string
+          part_id: string
+          operation_id: string
+          adjustment_quantity: number
+          note: string | null
+          created_at: string
+          created_by: string | null
+        }
+        Insert: {
+          adjustment_id?: string
+          part_id: string
+          operation_id: string
+          adjustment_quantity: number
+          note?: string | null
+          created_at?: string
+          created_by?: string | null
+        }
+        Update: {
+          adjustment_id?: string
+          part_id?: string
+          operation_id?: string
+          adjustment_quantity?: number
+          note?: string | null
+          created_at?: string
+          created_by?: string | null
+        }
+      }
+      inventory_adjustment_attributes: {
+        Row: {
+          adjustment_attribute_id: string
+          adjustment_id: string
+          value_id: string
+          created_at: string
+        }
+        Insert: {
+          adjustment_attribute_id?: string
+          adjustment_id: string
+          value_id: string
+          created_at?: string
+        }
+        Update: {
+          adjustment_attribute_id?: string
+          adjustment_id?: string
+          value_id?: string
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -518,6 +567,8 @@ export type OperationVariantAttribute = Database['public']['Tables']['operation_
 export type WorkLogAttribute = Database['public']['Tables']['work_log_attributes']['Row'];
 export type WorkSession = Database['public']['Tables']['work_sessions']['Row'];
 export type WorkSessionAttribute = Database['public']['Tables']['work_session_attributes']['Row'];
+export type InventoryAdjustment = Database['public']['Tables']['inventory_adjustments']['Row'];
+export type InventoryAdjustmentAttribute = Database['public']['Tables']['inventory_adjustment_attributes']['Row'];
 
 export type WorkLogInsert = Database['public']['Tables']['work_logs']['Insert'];
 export type WorkLogUpdate = Database['public']['Tables']['work_logs']['Update'];
@@ -545,6 +596,10 @@ export type WorkSessionInsert = Database['public']['Tables']['work_sessions']['I
 export type WorkSessionUpdate = Database['public']['Tables']['work_sessions']['Update'];
 export type WorkSessionAttributeInsert = Database['public']['Tables']['work_session_attributes']['Insert'];
 export type WorkSessionAttributeUpdate = Database['public']['Tables']['work_session_attributes']['Update'];
+export type InventoryAdjustmentInsert = Database['public']['Tables']['inventory_adjustments']['Insert'];
+export type InventoryAdjustmentUpdate = Database['public']['Tables']['inventory_adjustments']['Update'];
+export type InventoryAdjustmentAttributeInsert = Database['public']['Tables']['inventory_adjustment_attributes']['Insert'];
+export type InventoryAdjustmentAttributeUpdate = Database['public']['Tables']['inventory_adjustment_attributes']['Update'];
 
 // 結合したデータ型（実績一覧表示用）
 export interface WorkLogWithDetails extends WorkLog {
