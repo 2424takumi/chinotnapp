@@ -52,6 +52,7 @@ export default function InventoryPage() {
   const [operationAttributes, setOperationAttributes] = useState<any[]>([]);
   const [variantAttributes, setVariantAttributes] = useState<any[]>([]);
   const [variantAttributeValues, setVariantAttributeValues] = useState<any[]>([]);
+  const [processConsumptions, setProcessConsumptions] = useState<any[]>([]);
 
   // モーダル関連のstate
   const [showModal, setShowModal] = useState(false);
@@ -91,7 +92,7 @@ export default function InventoryPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [partsRes, operationsRes, logsRes, workersRes, consumptionsRes, bomRes, variantsRes, adjustmentsRes, opAttrsRes, vAttrsRes, vAttrValsRes] = await Promise.all([
+      const [partsRes, operationsRes, logsRes, workersRes, consumptionsRes, bomRes, variantsRes, adjustmentsRes, opAttrsRes, vAttrsRes, vAttrValsRes, processConsRes] = await Promise.all([
         supabase.from('parts').select('*').eq('active', true).order('order_index'),
         supabase.from('operations').select('*').eq('active', true).order('order_index'),
         supabase.from('work_logs').select(`
@@ -131,6 +132,7 @@ export default function InventoryPage() {
         supabase.from('operation_variant_attributes').select('*'),
         supabase.from('variant_attributes').select('*').eq('active', true),
         supabase.from('variant_attribute_values').select('*').eq('active', true),
+        supabase.from('process_consumption').select('*'),
       ]);
 
       if (partsRes.data) setParts(partsRes.data);
@@ -144,6 +146,7 @@ export default function InventoryPage() {
       if (opAttrsRes.data) setOperationAttributes(opAttrsRes.data);
       if (vAttrsRes.data) setVariantAttributes(vAttrsRes.data);
       if (vAttrValsRes.data) setVariantAttributeValues(vAttrValsRes.data);
+      if (processConsRes.data) setProcessConsumptions(processConsRes.data);
     } catch (error) {
       console.error('データ取得エラー:', error);
     } finally {
@@ -155,7 +158,7 @@ export default function InventoryPage() {
     if (parts.length > 0 && operations.length > 0 && logs.length > 0) {
       calculateInventory();
     }
-  }, [parts, operations, logs]);
+  }, [parts, operations, logs, adjustments, processConsumptions]);
 
   const calculateInventory = () => {
     const inventoryData: PartInventory[] = [];
@@ -297,6 +300,30 @@ export default function InventoryPage() {
 
               const existing = combinationMap.get(key)!;
               existing.inventory += adj.adjustment_quantity;
+            }
+          });
+
+          // 工程間消費も属性値ごとに反映（この工程で消費された分を引く）
+          const opConsumptions = processConsumptions.filter(pc => pc.consumed_operation_id === op.operation_id);
+          opConsumptions.forEach((cons: any) => {
+            if (!cons.consumed_attribute_values || Object.keys(cons.consumed_attribute_values).length === 0) {
+              // 属性値が記録されていない消費は「未分類」から引く
+              const key = 'uncategorized';
+              const existing = combinationMap.get(key);
+              if (existing) {
+                existing.inventory -= cons.consumed_quantity;
+              }
+            } else {
+              // 属性値の組み合わせをキーとして使う
+              const consValueIds = Object.values(cons.consumed_attribute_values as Record<string, string>)
+                .filter((id: any) => id)
+                .sort();
+
+              const key = consValueIds.join('|');
+              const existing = combinationMap.get(key);
+              if (existing) {
+                existing.inventory -= cons.consumed_quantity;
+              }
             }
           });
 

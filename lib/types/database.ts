@@ -79,6 +79,9 @@ export interface Database {
           order_index: number
           active: boolean
           category: string | null
+          consumes_previous_operation: boolean
+          consumption_quantity_per_unit: number
+          inherit_attributes: boolean
           created_at: string
           updated_at: string
         }
@@ -89,6 +92,9 @@ export interface Database {
           order_index?: number
           active?: boolean
           category?: string | null
+          consumes_previous_operation?: boolean
+          consumption_quantity_per_unit?: number
+          inherit_attributes?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -99,6 +105,9 @@ export interface Database {
           order_index?: number
           active?: boolean
           category?: string | null
+          consumes_previous_operation?: boolean
+          consumption_quantity_per_unit?: number
+          inherit_attributes?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -535,6 +544,32 @@ export interface Database {
           created_at?: string
         }
       }
+      process_consumption: {
+        Row: {
+          consumption_id: string
+          work_log_id: string
+          consumed_operation_id: string
+          consumed_quantity: number
+          consumed_attribute_values: Json | null
+          created_at: string
+        }
+        Insert: {
+          consumption_id?: string
+          work_log_id: string
+          consumed_operation_id: string
+          consumed_quantity: number
+          consumed_attribute_values?: Json | null
+          created_at?: string
+        }
+        Update: {
+          consumption_id?: string
+          work_log_id?: string
+          consumed_operation_id?: string
+          consumed_quantity?: number
+          consumed_attribute_values?: Json | null
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -569,6 +604,7 @@ export type WorkSession = Database['public']['Tables']['work_sessions']['Row'];
 export type WorkSessionAttribute = Database['public']['Tables']['work_session_attributes']['Row'];
 export type InventoryAdjustment = Database['public']['Tables']['inventory_adjustments']['Row'];
 export type InventoryAdjustmentAttribute = Database['public']['Tables']['inventory_adjustment_attributes']['Row'];
+export type ProcessConsumption = Database['public']['Tables']['process_consumption']['Row'];
 
 export type WorkLogInsert = Database['public']['Tables']['work_logs']['Insert'];
 export type WorkLogUpdate = Database['public']['Tables']['work_logs']['Update'];
@@ -600,6 +636,8 @@ export type InventoryAdjustmentInsert = Database['public']['Tables']['inventory_
 export type InventoryAdjustmentUpdate = Database['public']['Tables']['inventory_adjustments']['Update'];
 export type InventoryAdjustmentAttributeInsert = Database['public']['Tables']['inventory_adjustment_attributes']['Insert'];
 export type InventoryAdjustmentAttributeUpdate = Database['public']['Tables']['inventory_adjustment_attributes']['Update'];
+export type ProcessConsumptionInsert = Database['public']['Tables']['process_consumption']['Insert'];
+export type ProcessConsumptionUpdate = Database['public']['Tables']['process_consumption']['Update'];
 
 // 結合したデータ型（実績一覧表示用）
 export interface WorkLogWithDetails extends WorkLog {

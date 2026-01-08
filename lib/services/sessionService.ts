@@ -162,6 +162,69 @@ export async function stopWorkSession(params: SessionStopParams) {
 
     if (updateError) throw updateError
 
+    // 6. 前工程在庫の自動消費処理
+    try {
+      // 工程設定を取得
+      const { data: operation } = await supabase
+        .from('operations')
+        .select('consumes_previous_operation, consumption_quantity_per_unit, inherit_attributes, part_id, order_index')
+        .eq('operation_id', session.operation_id)
+        .single()
+
+      if (operation?.consumes_previous_operation) {
+        // 前工程を取得（同じ部品で、order_indexが小さい工程）
+        const { data: previousOp } = await supabase
+          .from('operations')
+          .select('operation_id')
+          .eq('part_id', operation.part_id)
+          .lt('order_index', operation.order_index)
+          .order('order_index', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (previousOp) {
+          const consumedQty = params.quantity * operation.consumption_quantity_per_unit
+
+          // 属性値の組み合わせをJSONとして保存
+          let attributeValuesJson = null
+          if (operation.inherit_attributes && session.work_session_attributes && session.work_session_attributes.length > 0) {
+            const attrMap: Record<string, string> = {}
+            for (const attr of session.work_session_attributes) {
+              // attribute_id を取得するために variant_attribute_values を検索
+              const { data: attrValue } = await supabase
+                .from('variant_attribute_values')
+                .select('attribute_id')
+                .eq('value_id', attr.value_id)
+                .single()
+
+              if (attrValue) {
+                attrMap[attrValue.attribute_id] = attr.value_id
+              }
+            }
+            attributeValuesJson = attrMap
+          }
+
+          // process_consumption に記録
+          const { error: consumptionError } = await supabase
+            .from('process_consumption')
+            .insert({
+              work_log_id: workLog.log_id,
+              consumed_operation_id: previousOp.operation_id,
+              consumed_quantity: consumedQty,
+              consumed_attribute_values: attributeValuesJson,
+            })
+
+          if (consumptionError) {
+            console.error('前工程消費の記録エラー:', consumptionError)
+            // エラーでも作業ログは作成されているので続行
+          }
+        }
+      }
+    } catch (consumptionError) {
+      console.error('前工程消費処理エラー:', consumptionError)
+      // エラーでも作業ログは作成されているので続行
+    }
+
     return { data: workLog, error: null }
   } catch (error: any) {
     console.error('セッション停止エラー:', error)

@@ -644,6 +644,9 @@ function OperationsTab() {
   const [selectedPartFilter, setSelectedPartFilter] = useState<string>('all');
   const [attributes, setAttributes] = useState<any[]>([]);
   const [selectedAttributeIds, setSelectedAttributeIds] = useState<string[]>([]);
+  const [consumesPreviousOperation, setConsumesPreviousOperation] = useState(false);
+  const [consumptionQuantityPerUnit, setConsumptionQuantityPerUnit] = useState('1');
+  const [inheritAttributes, setInheritAttributes] = useState(true);
 
   useEffect(() => {
     fetchParts();
@@ -682,6 +685,9 @@ function OperationsTab() {
             order_index: parseInt(orderIndex),
             category: category || null,
             active,
+            consumes_previous_operation: consumesPreviousOperation,
+            consumption_quantity_per_unit: parseInt(consumptionQuantityPerUnit),
+            inherit_attributes: inheritAttributes,
           })
           .eq('operation_id', editing.operation_id);
         if (error) throw error;
@@ -695,6 +701,9 @@ function OperationsTab() {
             order_index: parseInt(orderIndex),
             category: category || null,
             active,
+            consumes_previous_operation: consumesPreviousOperation,
+            consumption_quantity_per_unit: parseInt(consumptionQuantityPerUnit),
+            inherit_attributes: inheritAttributes,
           })
           .select()
           .single();
@@ -729,6 +738,9 @@ function OperationsTab() {
       setCategory('');
       setActive(true);
       setSelectedAttributeIds([]);
+      setConsumesPreviousOperation(false);
+      setConsumptionQuantityPerUnit('1');
+      setInheritAttributes(true);
       setEditing(null);
       fetchOperations();
     } catch (error) {
@@ -744,6 +756,9 @@ function OperationsTab() {
     setOrderIndex(operation.order_index.toString());
     setCategory(operation.category || '');
     setActive(operation.active);
+    setConsumesPreviousOperation(operation.consumes_previous_operation || false);
+    setConsumptionQuantityPerUnit((operation.consumption_quantity_per_unit || 1).toString());
+    setInheritAttributes(operation.inherit_attributes !== false);
 
     // この工程に紐付いている属性を取得
     const { data: operationAttrs } = await supabase
@@ -766,6 +781,9 @@ function OperationsTab() {
     setCategory('');
     setActive(true);
     setSelectedAttributeIds([]);
+    setConsumesPreviousOperation(false);
+    setConsumptionQuantityPerUnit('1');
+    setInheritAttributes(true);
   };
 
   const handleDelete = async () => {
@@ -872,6 +890,64 @@ function OperationsTab() {
                 />
                 <span className="text-sm">有効</span>
               </label>
+            </div>
+          </div>
+
+          {/* 前工程在庫消費設定 */}
+          <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <h4 className="text-sm font-semibold text-gray-800 mb-3">前工程在庫消費設定</h4>
+            <div className="space-y-3">
+              <label className="flex items-start">
+                <input
+                  type="checkbox"
+                  checked={consumesPreviousOperation}
+                  onChange={(e) => setConsumesPreviousOperation(e.target.checked)}
+                  className="mt-1 mr-2"
+                />
+                <div>
+                  <span className="text-sm font-medium">前工程在庫を消費する</span>
+                  <p className="text-xs text-gray-600 mt-1">
+                    この工程で作業を記録すると、前工程の在庫が自動的に減ります<br />
+                    例: 「皮はり」で5個作成 → 「帯鋸整形」の在庫が5個減る
+                  </p>
+                </div>
+              </label>
+
+              {consumesPreviousOperation && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      1個あたりの消費数量
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={consumptionQuantityPerUnit}
+                      onChange={(e) => setConsumptionQuantityPerUnit(e.target.value)}
+                      className="w-32 border rounded px-3 py-2 text-sm"
+                    />
+                    <p className="text-xs text-gray-600 mt-1">
+                      通常は「1」のままで問題ありません
+                    </p>
+                  </div>
+
+                  <label className="flex items-start">
+                    <input
+                      type="checkbox"
+                      checked={inheritAttributes}
+                      onChange={(e) => setInheritAttributes(e.target.checked)}
+                      className="mt-1 mr-2"
+                    />
+                    <div>
+                      <span className="text-sm font-medium">属性値を引き継ぐ</span>
+                      <p className="text-xs text-gray-600 mt-1">
+                        ONの場合、同じ属性値の在庫のみ消費します<br />
+                        例: 「通常版」で作業 → 「通常版」の在庫のみ減る
+                      </p>
+                    </div>
+                  </label>
+                </>
+              )}
             </div>
           </div>
 
