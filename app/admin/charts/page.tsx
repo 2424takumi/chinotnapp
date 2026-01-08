@@ -170,42 +170,6 @@ export default function ChartsPage() {
     };
   };
 
-  // グラフ1: 工程ごとの日別生産数
-  const getDailyProductionByOperation = () => {
-    const dateMap = new Map<string, Map<string, number>>();
-    const operationPartMap = new Map<string, string>(); // 工程→部品名のマッピング
-
-    logs.forEach((log) => {
-      const date = new Date(log.created_at).toISOString().split('T')[0];
-      if (!dateMap.has(date)) {
-        dateMap.set(date, new Map());
-      }
-      const operationMap = dateMap.get(date)!;
-      const current = operationMap.get(log.operation_name) || 0;
-      operationMap.set(log.operation_name, current + log.quantity);
-
-      // 工程と部品のマッピングを保存
-      if (!operationPartMap.has(log.operation_name)) {
-        operationPartMap.set(log.operation_name, log.part_name);
-      }
-    });
-
-    // すべての工程名を取得
-    const allOperations = Array.from(new Set(logs.map((l) => l.operation_name)));
-
-    const chartData = Array.from(dateMap.entries())
-      .map(([date, operationMap]) => {
-        const row: any = { date };
-        allOperations.forEach((op) => {
-          row[op] = operationMap.get(op) || 0;
-        });
-        return row;
-      })
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    return { chartData, operations: allOperations, operationPartMap };
-  };
-
   // グラフ2: 人別×工程別の生産性（分/良品）
   const getProductivityMatrix = () => {
     const matrix = new Map<string, Map<string, { minutes: number; good: number }>>();
@@ -249,53 +213,6 @@ export default function ChartsPage() {
     return { tableData, workers: allWorkers };
   };
 
-  // グラフ3: 工程別の平均作業時間
-  const getAverageTimeByOperation = () => {
-    const operationStats = new Map<
-      string,
-      {
-        total: { minutes: number; qty: number };
-        byWorker: Map<string, { minutes: number; qty: number }>;
-        partName: string;
-      }
-    >();
-
-    logs.forEach((log) => {
-      if (!operationStats.has(log.operation_name)) {
-        operationStats.set(log.operation_name, {
-          total: { minutes: 0, qty: 0 },
-          byWorker: new Map(),
-          partName: log.part_name,
-        });
-      }
-
-      const stats = operationStats.get(log.operation_name)!;
-      stats.total.minutes += log.duration_minutes;
-      stats.total.qty += log.quantity;
-
-      if (!stats.byWorker.has(log.worker_name)) {
-        stats.byWorker.set(log.worker_name, { minutes: 0, qty: 0 });
-      }
-      const workerStats = stats.byWorker.get(log.worker_name)!;
-      workerStats.minutes += log.duration_minutes;
-      workerStats.qty += log.quantity;
-    });
-
-    const chartData = Array.from(operationStats.entries()).map(([operation, stats]) => {
-      const row: any = { operation, partName: stats.partName };
-      row['全体平均'] = stats.total.qty > 0 ? (stats.total.minutes / stats.total.qty).toFixed(1) : 0;
-
-      stats.byWorker.forEach((workerStats, workerName) => {
-        row[workerName] = workerStats.qty > 0 ? (workerStats.minutes / workerStats.qty).toFixed(1) : 0;
-      });
-
-      return row;
-    });
-
-    const allWorkers = Array.from(new Set(logs.map((l) => l.worker_name)));
-    return { chartData, workers: ['全体平均', ...allWorkers] };
-  };
-
   // グラフ4: 工程別のロス率
   const getLossRateByOperation = () => {
     const operationStats = new Map<string, { quantity: number; loss: number; partName: string }>();
@@ -322,9 +239,7 @@ export default function ChartsPage() {
   };
 
   const latestDaySummary = getLatestDaySummary();
-  const dailyProduction = getDailyProductionByOperation();
   const productivityMatrix = getProductivityMatrix();
-  const averageTime = getAverageTimeByOperation();
   const lossRate = getLossRateByOperation();
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
@@ -515,41 +430,6 @@ export default function ChartsPage() {
             </div>
           )}
 
-          {/* グラフ1: 工程ごとの日別生産数 */}
-          <div className="bg-white p-4 md:p-6 rounded-lg shadow">
-            <h3 className="text-base md:text-lg font-bold mb-2">工程ごとの日別生産数</h3>
-            <p className="text-xs md:text-sm text-gray-600 mb-4">
-              各工程の日々の進捗を確認。ボトルネック工程の特定に活用
-            </p>
-            {dailyProduction.chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={dailyProduction.chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  {dailyProduction.operations.map((op, idx) => {
-                    const partName = dailyProduction.operationPartMap.get(op) || '';
-                    const partColor = getPartColorByName(partName);
-                    return (
-                      <Line
-                        key={op}
-                        type="monotone"
-                        dataKey={op}
-                        name={`【${partName}】${op}`}
-                        stroke={partColor.text}
-                        strokeWidth={2}
-                      />
-                    );
-                  })}
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-gray-500 text-center py-8">データがありません</p>
-            )}
-          </div>
-
           {/* グラフ2: 人別×工程別の生産性 */}
           <div className="bg-white p-4 md:p-6 rounded-lg shadow">
             <h3 className="text-base md:text-lg font-bold mb-2">人別×工程別の生産性（分/良品）</h3>
@@ -612,58 +492,6 @@ export default function ChartsPage() {
                   </tbody>
                 </table>
               </div>
-            ) : (
-              <p className="text-gray-500 text-center py-8">データがありません</p>
-            )}
-          </div>
-
-          {/* グラフ3: 工程別の平均作業時間 */}
-          <div className="bg-white p-4 md:p-6 rounded-lg shadow">
-            <h3 className="text-base md:text-lg font-bold mb-2">工程別の平均作業時間（分/個）</h3>
-            <p className="text-xs md:text-sm text-gray-600 mb-4">
-              全体平均と人別の比較。納期予測・工数見積もりに活用
-            </p>
-            {averageTime.chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={averageTime.chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="operation"
-                    angle={-45}
-                    textAnchor="end"
-                    height={120}
-                    tick={(props) => {
-                      const { x, y, payload } = props;
-                      const row = averageTime.chartData.find((r) => r.operation === payload.value);
-                      const partColor = getPartColorByName(row?.partName || '');
-                      return (
-                        <g transform={`translate(${x},${y})`}>
-                          <text
-                            x={0}
-                            y={0}
-                            dy={16}
-                            textAnchor="end"
-                            fill="#666"
-                            fontSize={11}
-                            transform="rotate(-45)"
-                          >
-                            <tspan fill={partColor.text} fontWeight="bold">
-                              【{row?.partName}】
-                            </tspan>
-                            {payload.value}
-                          </text>
-                        </g>
-                      );
-                    }}
-                  />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  {averageTime.workers.map((worker) => (
-                    <Bar key={worker} dataKey={worker} fill={getWorkerColorByName(worker)} />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
             ) : (
               <p className="text-gray-500 text-center py-8">データがありません</p>
             )}
