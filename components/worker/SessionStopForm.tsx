@@ -21,13 +21,38 @@ export function SessionStopForm({
   const [note, setNote] = useState('')
   const [elapsedTime, setElapsedTime] = useState(sessionData.elapsedSeconds)
 
-  // タイマー更新
+  // セッション開始時刻を取得
+  const startTime = new Date(sessionData.session.start_time)
+
+  // 経過時間を再計算する関数
+  const calculateElapsedTime = () => {
+    const now = new Date()
+    const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000)
+    setElapsedTime(elapsed)
+  }
+
+  // タイマー更新（開始時刻から毎秒再計算）
   useEffect(() => {
+    // 即座に1回計算
+    calculateElapsedTime()
+
+    // 1秒ごとに再計算
     const interval = setInterval(() => {
-      setElapsedTime((prev) => prev + 1)
+      calculateElapsedTime()
     }, 1000)
 
-    return () => clearInterval(interval)
+    // ページがアクティブになったときも再計算（スリープから復帰時）
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        calculateElapsedTime()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [])
 
   const formatTime = (seconds: number) => {
