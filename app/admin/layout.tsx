@@ -50,6 +50,12 @@ export default function AdminLayout({
             >
               マスタ管理
             </Link>
+            <Link
+              href="/admin/orders"
+              className="py-4 px-2 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium text-gray-700 hover:text-gray-900"
+            >
+              受注管理
+            </Link>
           </div>
         </div>
       </nav>

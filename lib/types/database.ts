@@ -570,6 +570,117 @@ export interface Database {
           created_at?: string
         }
       }
+      product_prices: {
+        Row: {
+          price_id: string
+          variant_id: string
+          price: number
+          cost: number | null
+          effective_from: string
+          effective_to: string | null
+          active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          price_id?: string
+          variant_id: string
+          price: number
+          cost?: number | null
+          effective_from?: string
+          effective_to?: string | null
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          price_id?: string
+          variant_id?: string
+          price?: number
+          cost?: number | null
+          effective_from?: string
+          effective_to?: string | null
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      orders: {
+        Row: {
+          order_id: string
+          order_number: string
+          customer_name: string
+          order_date: string
+          delivery_deadline: string | null
+          delivery_date: string | null
+          status: string
+          total_amount: number | null
+          note: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          order_id?: string
+          order_number: string
+          customer_name: string
+          order_date: string
+          delivery_deadline?: string | null
+          delivery_date?: string | null
+          status?: string
+          total_amount?: number | null
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          order_id?: string
+          order_number?: string
+          customer_name?: string
+          order_date?: string
+          delivery_deadline?: string | null
+          delivery_date?: string | null
+          status?: string
+          total_amount?: number | null
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      order_items: {
+        Row: {
+          order_item_id: string
+          order_id: string
+          variant_id: string
+          quantity: number
+          unit_price: number
+          subtotal: number
+          note: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          order_item_id?: string
+          order_id: string
+          variant_id: string
+          quantity: number
+          unit_price: number
+          subtotal: number
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          order_item_id?: string
+          order_id?: string
+          variant_id?: string
+          quantity?: number
+          unit_price?: number
+          subtotal?: number
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -639,6 +750,17 @@ export type InventoryAdjustmentAttributeUpdate = Database['public']['Tables']['i
 export type ProcessConsumptionInsert = Database['public']['Tables']['process_consumption']['Insert'];
 export type ProcessConsumptionUpdate = Database['public']['Tables']['process_consumption']['Update'];
 
+// 受注管理システムの型エイリアス
+export type ProductPrice = Database['public']['Tables']['product_prices']['Row'];
+export type ProductPriceInsert = Database['public']['Tables']['product_prices']['Insert'];
+export type ProductPriceUpdate = Database['public']['Tables']['product_prices']['Update'];
+export type Order = Database['public']['Tables']['orders']['Row'];
+export type OrderInsert = Database['public']['Tables']['orders']['Insert'];
+export type OrderUpdate = Database['public']['Tables']['orders']['Update'];
+export type OrderItem = Database['public']['Tables']['order_items']['Row'];
+export type OrderItemInsert = Database['public']['Tables']['order_items']['Insert'];
+export type OrderItemUpdate = Database['public']['Tables']['order_items']['Update'];
+
 // 結合したデータ型（実績一覧表示用）
 export interface WorkLogWithDetails extends WorkLog {
   worker_name: string;
@@ -659,4 +781,18 @@ export interface VariantAttributeValueWithAttribute extends VariantAttributeValu
 // 商品バリエーションと属性値を結合した型
 export interface ProductVariantV2WithAttributes extends ProductVariantV2 {
   attributes: VariantAttributeValueWithAttribute[];
+}
+
+// 受注管理：受注と明細を結合した型
+export interface OrderWithItems extends Order {
+  order_items: (OrderItem & {
+    product_variants_v2: {
+      display_name: string
+    }
+  })[]
+}
+
+// 受注管理：商品バリエーションと価格を結合した型
+export interface ProductVariantWithPrice extends ProductVariantV2 {
+  product_prices: ProductPrice[]
 }

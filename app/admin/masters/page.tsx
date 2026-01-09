@@ -11,7 +11,7 @@ import type {
 import { VariantAttributesTab, VariantAttributeValuesTab, ProductVariantsV2Tab } from './variant-tabs';
 
 export default function MastersPage() {
-  const [activeTab, setActiveTab] = useState<'workers' | 'parts' | 'operations' | 'variant_attributes' | 'variant_attribute_values' | 'product_variants_v2'>('workers');
+  const [activeTab, setActiveTab] = useState<'workers' | 'parts' | 'operations' | 'variant_attributes' | 'variant_attribute_values' | 'product_variants_v2' | 'prices'>('workers');
 
   return (
     <div className="space-y-6">
@@ -80,6 +80,16 @@ export default function MastersPage() {
           >
             商品バリエーション
           </button>
+          <button
+            onClick={() => setActiveTab('prices')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'prices'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            価格設定
+          </button>
         </div>
       </div>
 
@@ -91,6 +101,7 @@ export default function MastersPage() {
         {activeTab === 'variant_attributes' && <VariantAttributesTab />}
         {activeTab === 'variant_attribute_values' && <VariantAttributeValuesTab />}
         {activeTab === 'product_variants_v2' && <ProductVariantsV2Tab />}
+        {activeTab === 'prices' && <PricesTab />}
       </div>
     </div>
   );
@@ -1098,6 +1109,269 @@ function OperationsTab() {
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => handleEdit(operation)}
+                      className="text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                      編集
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function PricesTab() {
+  const [prices, setPrices] = useState<any[]>([]);
+  const [variants, setVariants] = useState<any[]>([]);
+  const [editing, setEditing] = useState<any | null>(null);
+  const [variantId, setVariantId] = useState('');
+  const [price, setPrice] = useState('');
+  const [cost, setCost] = useState('');
+  const [active, setActive] = useState(true);
+
+  useEffect(() => {
+    fetchVariants();
+    fetchPrices();
+  }, []);
+
+  const fetchVariants = async () => {
+    const { data } = await supabase
+      .from('product_variants_v2')
+      .select('*')
+      .eq('active', true)
+      .order('display_name');
+    if (data) setVariants(data);
+  };
+
+  const fetchPrices = async () => {
+    const { data } = await supabase
+      .from('product_prices')
+      .select('*, product_variants_v2(display_name)')
+      .eq('active', true)
+      .order('created_at', { ascending: false });
+    if (data) setPrices(data);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      if (editing) {
+        const { error } = await supabase
+          .from('product_prices')
+          .update({
+            variant_id: variantId,
+            price: parseFloat(price),
+            cost: cost ? parseFloat(cost) : null,
+            active,
+          })
+          .eq('price_id', editing.price_id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('product_prices')
+          .insert({
+            variant_id: variantId,
+            price: parseFloat(price),
+            cost: cost ? parseFloat(cost) : null,
+            active,
+          });
+        if (error) throw error;
+      }
+      fetchPrices();
+      handleCancel();
+      alert('保存しました');
+    } catch (error: any) {
+      console.error('保存エラー:', error);
+      alert(`エラー: ${error.message}`);
+    }
+  };
+
+  const handleEdit = (item: any) => {
+    setEditing(item);
+    setVariantId(item.variant_id);
+    setPrice(item.price.toString());
+    setCost(item.cost ? item.cost.toString() : '');
+    setActive(item.active);
+  };
+
+  const handleCancel = () => {
+    setEditing(null);
+    setVariantId('');
+    setPrice('');
+    setCost('');
+    setActive(true);
+  };
+
+  const handleDelete = async () => {
+    if (!editing) return;
+    if (!confirm('この価格設定を削除しますか？')) return;
+
+    try {
+      const { error } = await supabase
+        .from('product_prices')
+        .delete()
+        .eq('price_id', editing.price_id);
+      if (error) throw error;
+      fetchPrices();
+      handleCancel();
+      alert('削除しました');
+    } catch (error: any) {
+      console.error('削除エラー:', error);
+      alert(`エラー: ${error.message}`);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* フォーム */}
+      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow space-y-4">
+        <h3 className="text-lg font-semibold">{editing ? '価格設定を編集' : '新規価格設定'}</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              商品 <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={variantId}
+              onChange={(e) => setVariantId(e.target.value)}
+              required
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">選択してください</option>
+              {variants.map((v) => (
+                <option key={v.variant_id} value={v.variant_id}>
+                  {v.display_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              販売価格（円） <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              required
+              min="0"
+              step="0.01"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              原価（円）
+            </label>
+            <input
+              type="number"
+              value={cost}
+              onChange={(e) => setCost(e.target.value)}
+              min="0"
+              step="0.01"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">ステータス</label>
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+                className="mr-2"
+              />
+              <span>有効</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+          >
+            {editing ? '更新' : '登録'}
+          </button>
+          {editing && (
+            <>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+              >
+                削除
+              </button>
+            </>
+          )}
+        </div>
+      </form>
+
+      {/* 一覧 */}
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
+        <table className="min-w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">商品名</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">販売価格</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">原価</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">粗利</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ステータス</th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">操作</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {prices.map((item: any) => {
+              const grossProfit = item.cost ? item.price - item.cost : null;
+              const grossProfitRate = grossProfit && item.price > 0 ? (grossProfit / item.price) * 100 : null;
+
+              return (
+                <tr key={item.price_id}>
+                  <td className="px-4 py-3">{item.product_variants_v2?.display_name || '—'}</td>
+                  <td className="px-4 py-3">¥{item.price.toLocaleString()}</td>
+                  <td className="px-4 py-3">{item.cost ? `¥${item.cost.toLocaleString()}` : '—'}</td>
+                  <td className="px-4 py-3">
+                    {grossProfit !== null ? (
+                      <span>
+                        ¥{grossProfit.toLocaleString()}
+                        {grossProfitRate !== null && (
+                          <span className="text-xs text-gray-500 ml-1">
+                            ({grossProfitRate.toFixed(1)}%)
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        item.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {item.active ? '有効' : '無効'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={() => handleEdit(item)}
                       className="text-blue-600 hover:text-blue-800 text-sm"
                     >
                       編集
