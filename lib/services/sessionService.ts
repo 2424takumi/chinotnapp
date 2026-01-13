@@ -5,13 +5,17 @@ export interface SessionStartParams {
   workerId: string
   partId: string
   operationId: string
-  attributeValueIds?: string[] // 選択された属性値のID配列
+}
+
+export interface SessionStopItem {
+  attributeValueIds: string[] // 種類（属性値の組み合わせ）
+  quantity: number // 完成数量
+  lossQuantity: number // 不良数
 }
 
 export interface SessionStopParams {
   sessionId: string
-  quantity: number
-  lossQuantity?: number
+  items: SessionStopItem[] // 複数の種類×数量
   note?: string
 }
 
@@ -20,10 +24,6 @@ export interface ActiveSessionData {
   partName: string
   operationName: string
   elapsedSeconds: number
-  attributeValues: Array<{
-    attributeName: string
-    valueName: string
-  }>
 }
 
 /**
@@ -60,27 +60,6 @@ export async function startWorkSession(params: SessionStartParams) {
     if (sessionError) throw sessionError
     if (!session) throw new Error('セッションの作成に失敗しました')
 
-    // 3. 属性値がある場合は work_session_attributes に保存
-    if (params.attributeValueIds && params.attributeValueIds.length > 0) {
-      const attributeInserts = params.attributeValueIds.map(valueId => ({
-        session_id: session.session_id,
-        value_id: valueId,
-      }))
-
-      const { error: attributeError } = await supabase
-        .from('work_session_attributes')
-        .insert(attributeInserts)
-
-      if (attributeError) {
-        // セッションを削除してロールバック
-        await supabase
-          .from('work_sessions')
-          .delete()
-          .eq('session_id', session.session_id)
-        throw attributeError
-      }
-    }
-
     return { data: session, error: null }
   } catch (error: any) {
     console.error('セッション開始エラー:', error)
@@ -89,7 +68,7 @@ export async function startWorkSession(params: SessionStartParams) {
 }
 
 /**
- * 作業セッションを停止して作業ログを作成
+ * 作業セッションを停止して複数の作業ログを作成
  */
 export async function stopWorkSession(params: SessionStopParams) {
   const supabase = createClient()
@@ -98,7 +77,7 @@ export async function stopWorkSession(params: SessionStopParams) {
     // 1. セッション情報を取得
     const { data: session, error: sessionError } = await supabase
       .from('work_sessions')
-      .select('*, work_session_attributes(*)')
+      .select('*')
       .eq('session_id', params.sessionId)
       .eq('status', 'active')
       .single()
@@ -106,99 +85,104 @@ export async function stopWorkSession(params: SessionStopParams) {
     if (sessionError) throw sessionError
     if (!session) throw new Error('アクティブなセッションが見つかりません')
 
-    // 2. 作業時間を計算（分単位、最低1分）
+    // 2. 全体の作業時間を計算（分単位、最低1分）
     const startTime = new Date(session.start_time)
     const endTime = new Date()
-    const durationMinutes = Math.max(1, Math.round((endTime.getTime() - startTime.getTime()) / 60000))
+    const totalDurationMinutes = Math.max(1, Math.round((endTime.getTime() - startTime.getTime()) / 60000))
 
-    // 3. 作業ログを作成
-    const workLogInsert: WorkLogInsert = {
-      worker_id: session.worker_id,
-      part_id: session.part_id,
-      operation_id: session.operation_id,
-      duration_minutes: durationMinutes,
-      quantity: params.quantity,
-      loss_quantity: params.lossQuantity || 0,
-      note: params.note || null,
-      work_date: session.work_date,
-      session_id: session.session_id,
+    // 3. 総数量を計算（時間按分のため）
+    const totalQuantity = params.items.reduce((sum, item) => sum + item.quantity, 0)
+
+    if (totalQuantity === 0) {
+      throw new Error('完成数量が0です。少なくとも1種類は数量を入力してください。')
     }
 
-    const { data: workLog, error: workLogError } = await supabase
-      .from('work_logs')
-      .insert(workLogInsert)
-      .select()
+    // 4. 工程設定を取得（前工程消費処理用）
+    const { data: operation } = await supabase
+      .from('operations')
+      .select('consumes_previous_operation, consumption_quantity_per_unit, inherit_attributes, part_id, order_index')
+      .eq('operation_id', session.operation_id)
       .single()
 
-    if (workLogError) throw workLogError
-    if (!workLog) throw new Error('作業ログの作成に失敗しました')
-
-    // 4. work_log_attributes にセッション属性をコピー
-    if (session.work_session_attributes && session.work_session_attributes.length > 0) {
-      const logAttributeInserts = session.work_session_attributes.map((attr: any) => ({
-        work_log_id: workLog.log_id,
-        value_id: attr.value_id,
-      }))
-
-      const { error: logAttrError } = await supabase
-        .from('work_log_attributes')
-        .insert(logAttributeInserts)
-
-      if (logAttrError) {
-        console.error('作業ログ属性の保存エラー:', logAttrError)
-        // 続行する（エラーでもログは作成されている）
-      }
+    let previousOp = null
+    if (operation?.consumes_previous_operation) {
+      // 前工程を取得
+      const { data: prevOp } = await supabase
+        .from('operations')
+        .select('operation_id')
+        .eq('part_id', operation.part_id)
+        .lt('order_index', operation.order_index)
+        .order('order_index', { ascending: false })
+        .limit(1)
+        .single()
+      previousOp = prevOp
     }
 
-    // 5. セッションを完了状態に更新
-    const { error: updateError } = await supabase
-      .from('work_sessions')
-      .update({
-        status: 'completed',
-        end_time: endTime.toISOString(),
-        work_log_id: workLog.log_id,
-      })
-      .eq('session_id', session.session_id)
+    // 5. 各種類ごとに作業ログを作成
+    const createdLogs: WorkLog[] = []
 
-    if (updateError) throw updateError
+    for (const item of params.items) {
+      // 時間を数量比で按分（最低1分）
+      const itemDuration = Math.max(1, Math.round((item.quantity / totalQuantity) * totalDurationMinutes))
 
-    // 6. 前工程在庫の自動消費処理
-    try {
-      // 工程設定を取得
-      const { data: operation } = await supabase
-        .from('operations')
-        .select('consumes_previous_operation, consumption_quantity_per_unit, inherit_attributes, part_id, order_index')
-        .eq('operation_id', session.operation_id)
+      // 作業ログを作成
+      const workLogInsert: WorkLogInsert = {
+        worker_id: session.worker_id,
+        part_id: session.part_id,
+        operation_id: session.operation_id,
+        duration_minutes: itemDuration,
+        quantity: item.quantity,
+        loss_quantity: item.lossQuantity,
+        note: params.note || null,
+        work_date: session.work_date,
+        session_id: session.session_id,
+      }
+
+      const { data: workLog, error: workLogError } = await supabase
+        .from('work_logs')
+        .insert(workLogInsert)
+        .select()
         .single()
 
-      if (operation?.consumes_previous_operation) {
-        // 前工程を取得（同じ部品で、order_indexが小さい工程）
-        const { data: previousOp } = await supabase
-          .from('operations')
-          .select('operation_id')
-          .eq('part_id', operation.part_id)
-          .lt('order_index', operation.order_index)
-          .order('order_index', { ascending: false })
-          .limit(1)
-          .single()
+      if (workLogError) throw workLogError
+      if (!workLog) throw new Error('作業ログの作成に失敗しました')
 
-        if (previousOp) {
-          const consumedQty = params.quantity * operation.consumption_quantity_per_unit
+      createdLogs.push(workLog)
+
+      // 属性値を保存
+      if (item.attributeValueIds.length > 0) {
+        const logAttributeInserts = item.attributeValueIds.map(valueId => ({
+          work_log_id: workLog.log_id,
+          value_id: valueId,
+        }))
+
+        const { error: logAttrError } = await supabase
+          .from('work_log_attributes')
+          .insert(logAttributeInserts)
+
+        if (logAttrError) {
+          console.error('作業ログ属性の保存エラー:', logAttrError)
+        }
+      }
+
+      // 前工程在庫の自動消費処理
+      if (operation?.consumes_previous_operation && previousOp) {
+        try {
+          const consumedQty = item.quantity * operation.consumption_quantity_per_unit
 
           // 属性値の組み合わせをJSONとして保存
           let attributeValuesJson = null
-          if (operation.inherit_attributes && session.work_session_attributes && session.work_session_attributes.length > 0) {
+          if (operation.inherit_attributes && item.attributeValueIds.length > 0) {
             const attrMap: Record<string, string> = {}
-            for (const attr of session.work_session_attributes) {
-              // attribute_id を取得するために variant_attribute_values を検索
+            for (const valueId of item.attributeValueIds) {
               const { data: attrValue } = await supabase
                 .from('variant_attribute_values')
                 .select('attribute_id')
-                .eq('value_id', attr.value_id)
+                .eq('value_id', valueId)
                 .single()
 
               if (attrValue) {
-                attrMap[attrValue.attribute_id] = attr.value_id
+                attrMap[attrValue.attribute_id] = valueId
               }
             }
             attributeValuesJson = attrMap
@@ -216,16 +200,25 @@ export async function stopWorkSession(params: SessionStopParams) {
 
           if (consumptionError) {
             console.error('前工程消費の記録エラー:', consumptionError)
-            // エラーでも作業ログは作成されているので続行
           }
+        } catch (consumptionError) {
+          console.error('前工程消費処理エラー:', consumptionError)
         }
       }
-    } catch (consumptionError) {
-      console.error('前工程消費処理エラー:', consumptionError)
-      // エラーでも作業ログは作成されているので続行
     }
 
-    return { data: workLog, error: null }
+    // 6. セッションを完了状態に更新
+    const { error: updateError } = await supabase
+      .from('work_sessions')
+      .update({
+        status: 'completed',
+        end_time: endTime.toISOString(),
+      })
+      .eq('session_id', session.session_id)
+
+    if (updateError) throw updateError
+
+    return { data: createdLogs, error: null }
   } catch (error: any) {
     console.error('セッション停止エラー:', error)
     return { data: null, error }
@@ -244,14 +237,7 @@ export async function getActiveSession(workerId: string): Promise<{ data: Active
       .select(`
         *,
         parts:part_id(name),
-        operations:operation_id(name),
-        work_session_attributes(
-          value_id,
-          variant_attribute_values(
-            name,
-            variant_attributes(name)
-          )
-        )
+        operations:operation_id(name)
       `)
       .eq('worker_id', workerId)
       .eq('status', 'active')
@@ -274,18 +260,11 @@ export async function getActiveSession(workerId: string): Promise<{ data: Active
     const now = new Date()
     const elapsedSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000)
 
-    // 属性値を整形
-    const attributeValues = session.work_session_attributes?.map((attr: any) => ({
-      attributeName: attr.variant_attribute_values?.variant_attributes?.name || '',
-      valueName: attr.variant_attribute_values?.name || '',
-    })) || []
-
     const activeSessionData: ActiveSessionData = {
       session,
       partName: (session.parts as any)?.name || '',
       operationName: (session.operations as any)?.name || '',
       elapsedSeconds,
-      attributeValues,
     }
 
     return { data: activeSessionData, error: null }

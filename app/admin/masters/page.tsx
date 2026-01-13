@@ -11,7 +11,7 @@ import type {
 import { VariantAttributesTab, VariantAttributeValuesTab, ProductVariantsV2Tab } from './variant-tabs';
 
 export default function MastersPage() {
-  const [activeTab, setActiveTab] = useState<'workers' | 'parts' | 'operations' | 'variant_attributes' | 'variant_attribute_values' | 'product_variants_v2' | 'prices'>('workers');
+  const [activeTab, setActiveTab] = useState<'workers' | 'customers' | 'parts' | 'operations' | 'variant_attributes' | 'variant_attribute_values' | 'product_variants_v2' | 'prices'>('workers');
 
   return (
     <div className="space-y-6">
@@ -29,6 +29,16 @@ export default function MastersPage() {
             }`}
           >
             作業者
+          </button>
+          <button
+            onClick={() => setActiveTab('customers')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'customers'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            顧客
           </button>
           <button
             onClick={() => setActiveTab('parts')}
@@ -96,6 +106,7 @@ export default function MastersPage() {
       {/* タブコンテンツ */}
       <div>
         {activeTab === 'workers' && <WorkersTab />}
+        {activeTab === 'customers' && <CustomersTab />}
         {activeTab === 'parts' && <PartsTab />}
         {activeTab === 'operations' && <OperationsTab />}
         {activeTab === 'variant_attributes' && <VariantAttributesTab />}
@@ -1380,6 +1391,373 @@ function PricesTab() {
                 </tr>
               );
             })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function CustomersTab() {
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [editing, setEditing] = useState<any | null>(null);
+  const [customerCode, setCustomerCode] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerNameKana, setCustomerNameKana] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [address, setAddress] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [contactPerson, setContactPerson] = useState('');
+  const [note, setNote] = useState('');
+  const [orderIndex, setOrderIndex] = useState('0');
+  const [active, setActive] = useState(true);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const fetchCustomers = async () => {
+    const { data } = await supabase.from('customers').select('*').order('order_index');
+    if (data) setCustomers(data);
+  };
+
+  const generateCustomerCode = async () => {
+    const { data } = await supabase
+      .from('customers')
+      .select('customer_code')
+      .order('customer_code', { ascending: false })
+      .limit(1);
+
+    if (data && data.length > 0) {
+      const lastCode = data[0].customer_code;
+      const match = lastCode.match(/CUST-(\d+)/);
+      if (match) {
+        const nextNum = parseInt(match[1]) + 1;
+        return `CUST-${nextNum.toString().padStart(4, '0')}`;
+      }
+    }
+    return 'CUST-0001';
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      let code = customerCode;
+      if (!editing && !code) {
+        code = await generateCustomerCode();
+        setCustomerCode(code);
+      }
+
+      if (editing) {
+        const { error } = await supabase
+          .from('customers')
+          .update({
+            customer_code: code,
+            customer_name: customerName,
+            customer_name_kana: customerNameKana || null,
+            company_name: companyName || null,
+            postal_code: postalCode || null,
+            address: address || null,
+            phone: phone || null,
+            email: email || null,
+            contact_person: contactPerson || null,
+            note: note || null,
+            order_index: parseInt(orderIndex),
+            active,
+          })
+          .eq('customer_id', editing.customer_id);
+        if (error) throw error;
+      } else {
+        const { error} = await supabase
+          .from('customers')
+          .insert({
+            customer_code: code,
+            customer_name: customerName,
+            customer_name_kana: customerNameKana || null,
+            company_name: companyName || null,
+            postal_code: postalCode || null,
+            address: address || null,
+            phone: phone || null,
+            email: email || null,
+            contact_person: contactPerson || null,
+            note: note || null,
+            order_index: parseInt(orderIndex),
+            active,
+          });
+        if (error) throw error;
+      }
+
+      handleCancel();
+      fetchCustomers();
+      alert('保存しました');
+    } catch (error: any) {
+      console.error('保存エラー:', error);
+      alert(`エラー: ${error.message}`);
+    }
+  };
+
+  const handleEdit = (customer: any) => {
+    setEditing(customer);
+    setCustomerCode(customer.customer_code);
+    setCustomerName(customer.customer_name);
+    setCustomerNameKana(customer.customer_name_kana || '');
+    setCompanyName(customer.company_name || '');
+    setPostalCode(customer.postal_code || '');
+    setAddress(customer.address || '');
+    setPhone(customer.phone || '');
+    setEmail(customer.email || '');
+    setContactPerson(customer.contact_person || '');
+    setNote(customer.note || '');
+    setOrderIndex(customer.order_index.toString());
+    setActive(customer.active);
+  };
+
+  const handleCancel = () => {
+    setEditing(null);
+    setCustomerCode('');
+    setCustomerName('');
+    setCustomerNameKana('');
+    setCompanyName('');
+    setPostalCode('');
+    setAddress('');
+    setPhone('');
+    setEmail('');
+    setContactPerson('');
+    setNote('');
+    setOrderIndex('0');
+    setActive(true);
+  };
+
+  const handleDelete = async () => {
+    if (!editing) return;
+    if (!confirm(`顧客「${editing.customer_name}」を削除しますか？`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('customer_id', editing.customer_id);
+      if (error) throw error;
+
+      alert('削除しました');
+      handleCancel();
+      fetchCustomers();
+    } catch (error: any) {
+      console.error('削除エラー:', error);
+      alert(`エラー: ${error.message}`);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* フォーム */}
+      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow space-y-4">
+        <h3 className="text-lg font-semibold">{editing ? '顧客を編集' : '新規顧客'}</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              顧客コード <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={customerCode}
+              onChange={(e) => setCustomerCode(e.target.value)}
+              placeholder="自動生成されます"
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              顧客名 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              required
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">顧客名カナ</label>
+            <input
+              type="text"
+              value={customerNameKana}
+              onChange={(e) => setCustomerNameKana(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">法人名</label>
+            <input
+              type="text"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">電話番号</label>
+            <input
+              type="text"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">メールアドレス</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">郵便番号</label>
+            <input
+              type="text"
+              value={postalCode}
+              onChange={(e) => setPostalCode(e.target.value)}
+              placeholder="000-0000"
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">住所</label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">担当者名</label>
+            <input
+              type="text"
+              value={contactPerson}
+              onChange={(e) => setContactPerson(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">表示順</label>
+            <input
+              type="number"
+              value={orderIndex}
+              onChange={(e) => setOrderIndex(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">ステータス</label>
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+                className="mr-2"
+              />
+              <span>有効</span>
+            </label>
+          </div>
+
+          <div className="md:col-span-3">
+            <label className="block text-sm font-medium text-gray-700 mb-2">備考</label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={3}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+          >
+            {editing ? '更新' : '登録'}
+          </button>
+          {editing && (
+            <>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+              >
+                削除
+              </button>
+            </>
+          )}
+        </div>
+      </form>
+
+      {/* 一覧 */}
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
+        <table className="min-w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">顧客コード</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">顧客名</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">法人名</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">電話番号</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">表示順</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ステータス</th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">操作</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {customers.map((customer) => (
+              <tr key={customer.customer_id}>
+                <td className="px-4 py-3">{customer.customer_code}</td>
+                <td className="px-4 py-3">{customer.customer_name}</td>
+                <td className="px-4 py-3">{customer.company_name || '—'}</td>
+                <td className="px-4 py-3">{customer.phone || '—'}</td>
+                <td className="px-4 py-3">{customer.order_index}</td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`px-2 py-1 rounded text-xs ${
+                      customer.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    {customer.active ? '有効' : '無効'}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <button
+                    onClick={() => handleEdit(customer)}
+                    className="text-blue-600 hover:text-blue-800 text-sm"
+                  >
+                    編集
+                  </button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

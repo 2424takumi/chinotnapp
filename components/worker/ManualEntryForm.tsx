@@ -11,12 +11,21 @@ interface ManualEntryFormProps {
     partId: string
     operationId: string
     durationMinutes: number
-    quantity: number
-    lossQuantity: number
+    items: Array<{
+      attributeValueIds: string[]
+      quantity: number
+      lossQuantity: number
+    }>
     note: string
-    attributeValueIds: string[]
   }) => Promise<void>
   loading: boolean
+}
+
+interface WorkItem {
+  id: string
+  attributeValueIds: Record<string, string>
+  quantity: string
+  lossQuantity: string
 }
 
 export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryFormProps) {
@@ -31,13 +40,19 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
   const [selectedWorkerId, setSelectedWorkerId] = useState(workerId || '')
   const [selectedPartId, setSelectedPartId] = useState('')
   const [selectedOperationId, setSelectedOperationId] = useState('')
-  const [selectedAttributeValues, setSelectedAttributeValues] = useState<Record<string, string>>({})
 
   const [hours, setHours] = useState('0')
   const [minutes, setMinutes] = useState('0')
-  const [quantity, setQuantity] = useState('')
-  const [lossQuantity, setLossQuantity] = useState('0')
   const [note, setNote] = useState('')
+
+  const [items, setItems] = useState<WorkItem[]>([
+    {
+      id: crypto.randomUUID(),
+      attributeValueIds: {},
+      quantity: '',
+      lossQuantity: '0',
+    },
+  ])
 
   useEffect(() => {
     fetchWorkers()
@@ -59,7 +74,15 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
     } else {
       setAttributes([])
       setAttributeValues({})
-      setSelectedAttributeValues({})
+      // 種類をリセット
+      setItems([
+        {
+          id: crypto.randomUUID(),
+          attributeValueIds: {},
+          quantity: '',
+          lossQuantity: '0',
+        },
+      ])
     }
   }, [selectedOperationId])
 
@@ -144,6 +167,46 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
     }
   }
 
+  const addItem = () => {
+    setItems([
+      ...items,
+      {
+        id: crypto.randomUUID(),
+        attributeValueIds: {},
+        quantity: '',
+        lossQuantity: '0',
+      },
+    ])
+  }
+
+  const removeItem = (id: string) => {
+    if (items.length === 1) {
+      alert('最低1つの種類が必要です')
+      return
+    }
+    setItems(items.filter(item => item.id !== id))
+  }
+
+  const updateItem = (id: string, field: keyof WorkItem, value: any) => {
+    setItems(items.map(item => (item.id === id ? { ...item, [field]: value } : item)))
+  }
+
+  const updateItemAttribute = (itemId: string, attributeId: string, valueId: string) => {
+    setItems(
+      items.map(item =>
+        item.id === itemId
+          ? {
+              ...item,
+              attributeValueIds: {
+                ...item.attributeValueIds,
+                [attributeId]: valueId,
+              },
+            }
+          : item
+      )
+    )
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -157,57 +220,71 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
       return
     }
 
-    const missingAttributes = attributes.filter(
-      attr => !selectedAttributeValues[attr.attribute_id]
-    )
-
-    if (missingAttributes.length > 0) {
-      alert(`以下の属性を選択してください: ${missingAttributes.map(a => a.name).join(', ')}`)
-      return
-    }
-
     const durationMinutes = parseInt(hours) * 60 + parseInt(minutes)
-    const qty = parseInt(quantity)
-    const loss = parseInt(lossQuantity)
-
     if (durationMinutes <= 0) {
       alert('作業時間を入力してください')
       return
     }
 
-    if (!qty || qty <= 0) {
-      alert('数量を入力してください')
-      return
+    // バリデーション
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+
+      // 属性値チェック
+      const missingAttrs = attributes.filter(attr => !item.attributeValueIds[attr.attribute_id])
+      if (missingAttrs.length > 0) {
+        alert(
+          `種類${i + 1}: 以下の属性を選択してください: ${missingAttrs.map(a => a.name).join(', ')}`
+        )
+        return
+      }
+
+      // 数量チェック
+      const qty = parseInt(item.quantity)
+      if (isNaN(qty) || qty <= 0) {
+        alert(`種類${i + 1}: 完成数量を正しく入力してください`)
+        return
+      }
+
+      // 不良数チェック
+      const lossQty = parseInt(item.lossQuantity)
+      if (isNaN(lossQty) || lossQty < 0) {
+        alert(`種類${i + 1}: 不良数を正しく入力してください`)
+        return
+      }
     }
 
-    if (loss < 0) {
-      alert('不良数は0以上で入力してください')
-      return
-    }
-
-    const attributeValueIds = Object.values(selectedAttributeValues).filter(Boolean)
+    // 送信データを作成
+    const submitItems = items.map(item => ({
+      attributeValueIds: Object.values(item.attributeValueIds),
+      quantity: parseInt(item.quantity),
+      lossQuantity: parseInt(item.lossQuantity),
+    }))
 
     await onSubmit({
       workerId: selectedWorkerId,
       partId: selectedPartId,
       operationId: selectedOperationId,
       durationMinutes,
-      quantity: qty,
-      lossQuantity: loss,
+      items: submitItems,
       note: note.trim(),
-      attributeValueIds,
     })
 
     // フォームをリセット
     setSelectedWorkerId(workerId || '')
     setSelectedPartId('')
     setSelectedOperationId('')
-    setSelectedAttributeValues({})
     setHours('0')
     setMinutes('0')
-    setQuantity('')
-    setLossQuantity('0')
     setNote('')
+    setItems([
+      {
+        id: crypto.randomUUID(),
+        attributeValueIds: {},
+        quantity: '',
+        lossQuantity: '0',
+      },
+    ])
   }
 
   return (
@@ -276,38 +353,10 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
           </select>
         </div>
 
-        {/* 属性選択 */}
-        {attributes.map((attribute) => (
-          <div key={attribute.attribute_id}>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {attribute.name} <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={selectedAttributeValues[attribute.attribute_id] || ''}
-              onChange={(e) =>
-                setSelectedAttributeValues({
-                  ...selectedAttributeValues,
-                  [attribute.attribute_id]: e.target.value,
-                })
-              }
-              required
-              disabled={loading}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
-            >
-              <option value="">選択してください</option>
-              {attributeValues[attribute.attribute_id]?.map((value) => (
-                <option key={value.value_id} value={value.value_id}>
-                  {value.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        ))}
-
         {/* 作業時間 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            作業時間 <span className="text-red-500">*</span>
+            作業時間（合計） <span className="text-red-500">*</span>
           </label>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -336,40 +385,104 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
               <span className="text-xs text-gray-500 mt-1 block">分</span>
             </div>
           </div>
+          <p className="text-xs text-gray-500 mt-1">
+            ※ 各種類に数量比で按分されます
+          </p>
         </div>
 
-        {/* 数量 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            完成数量 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="number"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            required
-            min="1"
-            disabled={loading}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
-            placeholder="例: 10"
-          />
-        </div>
+        {/* 複数種類の入力 */}
+        {selectedOperationId && (
+          <div className="space-y-4 border-t pt-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-base font-medium text-gray-900">作業した種類と数量</h3>
+              <button
+                type="button"
+                onClick={addItem}
+                disabled={loading}
+                className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50"
+              >
+                + 種類を追加
+              </button>
+            </div>
 
-        {/* 不良数 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            不良数
-          </label>
-          <input
-            type="number"
-            value={lossQuantity}
-            onChange={(e) => setLossQuantity(e.target.value)}
-            min="0"
-            disabled={loading}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
-            placeholder="例: 0"
-          />
-        </div>
+            {items.map((item, index) => (
+              <div
+                key={item.id}
+                className="border border-gray-300 rounded-lg p-4 space-y-3 bg-white"
+              >
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium text-gray-900 text-sm">種類 {index + 1}</h4>
+                  {items.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.id)}
+                      disabled={loading}
+                      className="text-red-600 text-sm hover:text-red-800 disabled:opacity-50"
+                    >
+                      削除
+                    </button>
+                  )}
+                </div>
+
+                {/* 属性選択 */}
+                {attributes.map(attribute => (
+                  <div key={attribute.attribute_id}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {attribute.name} <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={item.attributeValueIds[attribute.attribute_id] || ''}
+                      onChange={e =>
+                        updateItemAttribute(item.id, attribute.attribute_id, e.target.value)
+                      }
+                      required
+                      disabled={loading}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+                    >
+                      <option value="">選択してください</option>
+                      {attributeValues[attribute.attribute_id]?.map(value => (
+                        <option key={value.value_id} value={value.value_id}>
+                          {value.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+
+                {/* 完成数量 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    完成数量 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={item.quantity}
+                    onChange={e => updateItem(item.id, 'quantity', e.target.value)}
+                    required
+                    min="1"
+                    disabled={loading}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+                    placeholder="例: 10"
+                  />
+                </div>
+
+                {/* 不良数 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">不良数</label>
+                  <input
+                    type="number"
+                    value={item.lossQuantity}
+                    onChange={e => updateItem(item.id, 'lossQuantity', e.target.value)}
+                    min="0"
+                    disabled={loading}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+                    placeholder="例: 0"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* メモ */}
         <div>

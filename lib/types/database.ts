@@ -444,7 +444,6 @@ export interface Database {
           end_time: string | null
           work_date: string
           status: 'active' | 'paused' | 'completed' | 'abandoned'
-          work_log_id: string | null
           created_at: string
           updated_at: string
         }
@@ -457,7 +456,6 @@ export interface Database {
           end_time?: string | null
           work_date?: string
           status?: 'active' | 'paused' | 'completed' | 'abandoned'
-          work_log_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -470,7 +468,6 @@ export interface Database {
           end_time?: string | null
           work_date?: string
           status?: 'active' | 'paused' | 'completed' | 'abandoned'
-          work_log_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -609,6 +606,7 @@ export interface Database {
         Row: {
           order_id: string
           order_number: string
+          customer_id: string | null
           customer_name: string
           order_date: string
           delivery_deadline: string | null
@@ -622,6 +620,7 @@ export interface Database {
         Insert: {
           order_id?: string
           order_number: string
+          customer_id?: string | null
           customer_name: string
           order_date: string
           delivery_deadline?: string | null
@@ -635,6 +634,7 @@ export interface Database {
         Update: {
           order_id?: string
           order_number?: string
+          customer_id?: string | null
           customer_name?: string
           order_date?: string
           delivery_deadline?: string | null
@@ -677,6 +677,59 @@ export interface Database {
           unit_price?: number
           subtotal?: number
           note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      customers: {
+        Row: {
+          customer_id: string
+          customer_code: string
+          customer_name: string
+          customer_name_kana: string | null
+          company_name: string | null
+          postal_code: string | null
+          address: string | null
+          phone: string | null
+          email: string | null
+          contact_person: string | null
+          note: string | null
+          order_index: number
+          active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          customer_id?: string
+          customer_code: string
+          customer_name: string
+          customer_name_kana?: string | null
+          company_name?: string | null
+          postal_code?: string | null
+          address?: string | null
+          phone?: string | null
+          email?: string | null
+          contact_person?: string | null
+          note?: string | null
+          order_index?: number
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          customer_id?: string
+          customer_code?: string
+          customer_name?: string
+          customer_name_kana?: string | null
+          company_name?: string | null
+          postal_code?: string | null
+          address?: string | null
+          phone?: string | null
+          email?: string | null
+          contact_person?: string | null
+          note?: string | null
+          order_index?: number
+          active?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -760,6 +813,9 @@ export type OrderUpdate = Database['public']['Tables']['orders']['Update'];
 export type OrderItem = Database['public']['Tables']['order_items']['Row'];
 export type OrderItemInsert = Database['public']['Tables']['order_items']['Insert'];
 export type OrderItemUpdate = Database['public']['Tables']['order_items']['Update'];
+export type Customer = Database['public']['Tables']['customers']['Row'];
+export type CustomerInsert = Database['public']['Tables']['customers']['Insert'];
+export type CustomerUpdate = Database['public']['Tables']['customers']['Update'];
 
 // 結合したデータ型（実績一覧表示用）
 export interface WorkLogWithDetails extends WorkLog {
@@ -790,6 +846,16 @@ export interface OrderWithItems extends Order {
       display_name: string
     }
   })[]
+}
+
+// 受注管理：受注と顧客を結合した型
+export interface OrderWithCustomer extends Order {
+  customers?: {
+    customer_name: string
+    customer_code: string
+    phone: string | null
+    email: string | null
+  } | null
 }
 
 // 受注管理：商品バリエーションと価格を結合した型

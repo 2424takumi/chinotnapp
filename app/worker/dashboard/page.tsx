@@ -43,7 +43,6 @@ function DashboardContent() {
   const handleStartSession = async (params: {
     partId: string
     operationId: string
-    attributeValueIds: string[]
   }) => {
     if (!worker) return
 
@@ -53,7 +52,6 @@ function DashboardContent() {
         workerId: worker.worker_id,
         partId: params.partId,
         operationId: params.operationId,
-        attributeValueIds: params.attributeValueIds,
       })
 
       if (error) {
@@ -71,8 +69,11 @@ function DashboardContent() {
   }
 
   const handleStopSession = async (params: {
-    quantity: number
-    lossQuantity?: number
+    items: Array<{
+      attributeValueIds: string[]
+      quantity: number
+      lossQuantity: number
+    }>
     note?: string
   }) => {
     if (!activeSession) return
@@ -81,8 +82,7 @@ function DashboardContent() {
     try {
       const { data, error } = await stopWorkSession({
         sessionId: activeSession.session.session_id,
-        quantity: params.quantity,
-        lossQuantity: params.lossQuantity,
+        items: params.items,
         note: params.note,
       })
 
@@ -126,49 +126,65 @@ function DashboardContent() {
     partId: string
     operationId: string
     durationMinutes: number
-    quantity: number
-    lossQuantity: number
+    items: Array<{
+      attributeValueIds: string[]
+      quantity: number
+      lossQuantity: number
+    }>
     note: string
-    attributeValueIds: string[]
   }) => {
     setLoading(true)
     try {
       const supabase = createClient()
 
-      // 作業ログを直接作成
-      const { data: workLog, error: workLogError } = await supabase
-        .from('work_logs')
-        .insert({
-          worker_id: params.workerId,
-          part_id: params.partId,
-          operation_id: params.operationId,
-          duration_minutes: params.durationMinutes,
-          quantity: params.quantity,
-          loss_quantity: params.lossQuantity,
-          note: params.note || null,
-          work_date: new Date().toISOString().split('T')[0],
-        })
-        .select()
-        .single()
+      // 総数量を計算
+      const totalQuantity = params.items.reduce((sum, item) => sum + item.quantity, 0)
 
-      if (workLogError) {
-        alert(`エラー: ${workLogError.message}`)
+      if (totalQuantity === 0) {
+        alert('完成数量が0です。少なくとも1種類は数量を入力してください。')
         return
       }
 
-      // 属性値を保存
-      if (params.attributeValueIds.length > 0 && workLog) {
-        const logAttributeInserts = params.attributeValueIds.map(valueId => ({
-          work_log_id: workLog.log_id,
-          value_id: valueId,
-        }))
+      // 各種類ごとに作業ログを作成
+      for (const item of params.items) {
+        // 時間を数量比で按分（最低1分）
+        const itemDuration = Math.max(1, Math.round((item.quantity / totalQuantity) * params.durationMinutes))
 
-        const { error: logAttrError } = await supabase
-          .from('work_log_attributes')
-          .insert(logAttributeInserts)
+        // 作業ログを作成
+        const { data: workLog, error: workLogError } = await supabase
+          .from('work_logs')
+          .insert({
+            worker_id: params.workerId,
+            part_id: params.partId,
+            operation_id: params.operationId,
+            duration_minutes: itemDuration,
+            quantity: item.quantity,
+            loss_quantity: item.lossQuantity,
+            note: params.note || null,
+            work_date: new Date().toISOString().split('T')[0],
+          })
+          .select()
+          .single()
 
-        if (logAttrError) {
-          console.error('作業ログ属性の保存エラー:', logAttrError)
+        if (workLogError) {
+          alert(`エラー: ${workLogError.message}`)
+          return
+        }
+
+        // 属性値を保存
+        if (item.attributeValueIds.length > 0 && workLog) {
+          const logAttributeInserts = item.attributeValueIds.map(valueId => ({
+            work_log_id: workLog.log_id,
+            value_id: valueId,
+          }))
+
+          const { error: logAttrError } = await supabase
+            .from('work_log_attributes')
+            .insert(logAttributeInserts)
+
+          if (logAttrError) {
+            console.error('作業ログ属性の保存エラー:', logAttrError)
+          }
         }
       }
 

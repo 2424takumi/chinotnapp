@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Order, OrderItem, ProductVariantV2 } from '@/lib/types/database';
+import type { Order, OrderItem, ProductVariantV2, Customer } from '@/lib/types/database';
 
 interface OrderWithDetails extends Order {
   order_items: (OrderItem & {
@@ -13,10 +13,12 @@ interface OrderWithDetails extends Order {
 }
 
 interface OrderFormData {
+  customer_id: string;
   customer_name: string;
   order_number: string;
   order_date: string;
   delivery_deadline: string;
+  status: string;
   note: string;
   items: {
     variant_id: string;
@@ -28,6 +30,7 @@ interface OrderFormData {
 export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [variants, setVariants] = useState<ProductVariantV2[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -36,10 +39,12 @@ export default function OrdersPage() {
 
   // フォーム状態
   const [formData, setFormData] = useState<OrderFormData>({
+    customer_id: '',
     customer_name: '',
     order_number: '',
     order_date: new Date().toISOString().split('T')[0],
     delivery_deadline: '',
+    status: 'pending',
     note: '',
     items: [],
   });
@@ -47,6 +52,7 @@ export default function OrdersPage() {
   useEffect(() => {
     fetchOrders();
     fetchVariants();
+    fetchCustomers();
     fetchPrices();
   }, []);
 
@@ -73,6 +79,15 @@ export default function OrdersPage() {
     if (data) setVariants(data);
   };
 
+  const fetchCustomers = async () => {
+    const { data } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('active', true)
+      .order('order_index');
+    if (data) setCustomers(data);
+  };
+
   const fetchPrices = async () => {
     const { data } = await supabase
       .from('product_prices')
@@ -90,10 +105,12 @@ export default function OrdersPage() {
   const handleNewOrder = () => {
     setEditingOrder(null);
     setFormData({
+      customer_id: '',
       customer_name: '',
       order_number: '',
       order_date: new Date().toISOString().split('T')[0],
       delivery_deadline: '',
+      status: 'pending',
       note: '',
       items: [],
     });
@@ -103,10 +120,12 @@ export default function OrdersPage() {
   const handleEditOrder = (order: OrderWithDetails) => {
     setEditingOrder(order);
     setFormData({
+      customer_id: order.customer_id || '',
       customer_name: order.customer_name,
       order_number: order.order_number,
       order_date: order.order_date,
       delivery_deadline: order.delivery_deadline || '',
+      status: order.status,
       note: order.note || '',
       items: order.order_items.map((item) => ({
         variant_id: item.variant_id,
@@ -163,16 +182,25 @@ export default function OrdersPage() {
 
       if (editingOrder) {
         // 更新
+        const updateData: any = {
+          customer_id: formData.customer_id || null,
+          customer_name: formData.customer_name,
+          order_number: formData.order_number,
+          order_date: formData.order_date,
+          delivery_deadline: formData.delivery_deadline || null,
+          status: formData.status,
+          note: formData.note || null,
+          total_amount: totalAmount,
+        };
+
+        // ステータスが納品完了の場合は納品日を設定
+        if (formData.status === 'completed' && !editingOrder.delivery_date) {
+          updateData.delivery_date = new Date().toISOString().split('T')[0];
+        }
+
         const { error: orderError } = await supabase
           .from('orders')
-          .update({
-            customer_name: formData.customer_name,
-            order_number: formData.order_number,
-            order_date: formData.order_date,
-            delivery_deadline: formData.delivery_deadline || null,
-            note: formData.note || null,
-            total_amount: totalAmount,
-          })
+          .update(updateData)
           .eq('order_id', editingOrder.order_id);
 
         if (orderError) throw orderError;
@@ -198,17 +226,25 @@ export default function OrdersPage() {
         if (itemsError) throw itemsError;
       } else {
         // 新規作成
+        const insertData: any = {
+          customer_id: formData.customer_id || null,
+          customer_name: formData.customer_name,
+          order_number: formData.order_number,
+          order_date: formData.order_date,
+          delivery_deadline: formData.delivery_deadline || null,
+          note: formData.note || null,
+          total_amount: totalAmount,
+          status: formData.status,
+        };
+
+        // ステータスが納品完了の場合は納品日を設定
+        if (formData.status === 'completed') {
+          insertData.delivery_date = new Date().toISOString().split('T')[0];
+        }
+
         const { data: newOrder, error: orderError } = await supabase
           .from('orders')
-          .insert({
-            customer_name: formData.customer_name,
-            order_number: formData.order_number,
-            order_date: formData.order_date,
-            delivery_deadline: formData.delivery_deadline || null,
-            note: formData.note || null,
-            total_amount: totalAmount,
-            status: 'pending',
-          })
+          .insert(insertData)
           .select()
           .single();
 
@@ -377,13 +413,26 @@ export default function OrdersPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     顧客名 <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={formData.customer_name}
-                    onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                  <select
+                    value={formData.customer_id}
+                    onChange={(e) => {
+                      const selectedCustomer = customers.find(c => c.customer_id === e.target.value);
+                      setFormData({
+                        ...formData,
+                        customer_id: e.target.value,
+                        customer_name: selectedCustomer?.customer_name || '',
+                      });
+                    }}
                     required
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+                  >
+                    <option value="">顧客を選択</option>
+                    {customers.map((customer) => (
+                      <option key={customer.customer_id} value={customer.customer_id}>
+                        {customer.customer_name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -421,6 +470,23 @@ export default function OrdersPage() {
                     onChange={(e) => setFormData({ ...formData, delivery_deadline: e.target.value })}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    ステータス <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    required
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="pending">受注</option>
+                    <option value="in_production">製作中</option>
+                    <option value="completed">納品完了</option>
+                    <option value="cancelled">キャンセル</option>
+                  </select>
                 </div>
               </div>
 
