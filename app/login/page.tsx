@@ -30,7 +30,6 @@ export default function LoginPage() {
 
       if (error) {
         setError('ログインに失敗しました。メールアドレスとパスワードを確認してください。')
-        setLoading(false)
         return
       }
 
@@ -41,6 +40,7 @@ export default function LoginPage() {
       }
     } catch (err) {
       setError('予期しないエラーが発生しました。')
+    } finally {
       setLoading(false)
     }
   }

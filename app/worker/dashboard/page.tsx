@@ -142,7 +142,7 @@ function DashboardContent() {
 
       if (totalQuantity === 0) {
         alert('完成数量が0です。少なくとも1種類は数量を入力してください。')
-        return
+        throw new Error('完成数量が0です')
       }
 
       // 各種類ごとに作業ログを作成
@@ -168,7 +168,7 @@ function DashboardContent() {
 
         if (workLogError) {
           alert(`エラー: ${workLogError.message}`)
-          return
+          throw workLogError
         }
 
         // 属性値を保存
@@ -184,13 +184,16 @@ function DashboardContent() {
 
           if (logAttrError) {
             console.error('作業ログ属性の保存エラー:', logAttrError)
+            alert(`属性値の保存に失敗しました: ${logAttrError.message}`)
+            throw logAttrError
           }
         }
       }
 
       alert('作業を登録しました')
     } catch (error: any) {
-      alert(`エラー: ${error.message}`)
+      // エラーをそのまま再スロー（フォームリセットを防ぐため）
+      throw error
     } finally {
       setLoading(false)
     }

@@ -261,30 +261,35 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
       lossQuantity: parseInt(item.lossQuantity),
     }))
 
-    await onSubmit({
-      workerId: selectedWorkerId,
-      partId: selectedPartId,
-      operationId: selectedOperationId,
-      durationMinutes,
-      items: submitItems,
-      note: note.trim(),
-    })
+    try {
+      await onSubmit({
+        workerId: selectedWorkerId,
+        partId: selectedPartId,
+        operationId: selectedOperationId,
+        durationMinutes,
+        items: submitItems,
+        note: note.trim(),
+      })
 
-    // フォームをリセット
-    setSelectedWorkerId(workerId || '')
-    setSelectedPartId('')
-    setSelectedOperationId('')
-    setHours('0')
-    setMinutes('0')
-    setNote('')
-    setItems([
-      {
-        id: crypto.randomUUID(),
-        attributeValueIds: {},
-        quantity: '',
-        lossQuantity: '0',
-      },
-    ])
+      // 成功時のみフォームをリセット
+      setSelectedWorkerId(workerId || '')
+      setSelectedPartId('')
+      setSelectedOperationId('')
+      setHours('0')
+      setMinutes('0')
+      setNote('')
+      setItems([
+        {
+          id: crypto.randomUUID(),
+          attributeValueIds: {},
+          quantity: '',
+          lossQuantity: '0',
+        },
+      ])
+    } catch (error) {
+      // エラー時はフォームをリセットしない（入力内容を保持）
+      console.error('手動登録エラー:', error)
+    }
   }
 
   return (
