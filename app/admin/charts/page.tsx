@@ -45,12 +45,12 @@ export default function ChartsPage() {
   const [parts, setParts] = useState<any[]>([]);
 
   useEffect(() => {
-    // デフォルトで過去7日間
+    // デフォルトで過去30日間
     const today = new Date();
-    const weekAgo = new Date(today);
-    weekAgo.setDate(today.getDate() - 7);
+    const monthAgo = new Date(today);
+    monthAgo.setDate(today.getDate() - 30);
 
-    setDateFrom(weekAgo.toISOString().split('T')[0]);
+    setDateFrom(monthAgo.toISOString().split('T')[0]);
     setDateTo(today.toISOString().split('T')[0]);
 
     fetchMasterData();
@@ -302,7 +302,20 @@ export default function ChartsPage() {
         </div>
       ) : logs.length === 0 ? (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
-          <p className="text-yellow-800">選択した期間・条件にデータがありません</p>
+          <div className="mb-4">
+            <svg className="mx-auto h-12 w-12 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <p className="text-yellow-800 font-medium text-lg mb-2">選択した期間・条件にデータがありません</p>
+          <p className="text-yellow-700 text-sm mb-4">
+            以下をお試しください：
+          </p>
+          <ul className="text-yellow-700 text-sm text-left max-w-md mx-auto space-y-2">
+            <li>• 期間を広げる（例：開始日を1ヶ月前に設定）</li>
+            <li>• 作業者フィルタ・部品フィルタを「全て」に変更</li>
+            <li>• 実績一覧タブで登録済みデータの日付を確認</li>
+          </ul>
         </div>
       ) : (
         <div className="space-y-6">
