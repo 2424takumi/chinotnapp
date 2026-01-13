@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { Part, Operation, VariantAttribute, VariantAttributeValue } from '@/lib/types/database'
+import type { Part, Operation, VariantAttribute, VariantAttributeValue, Worker } from '@/lib/types/database'
 
 interface ManualEntryFormProps {
-  workerId: string
+  workerId?: string
   onSubmit: (params: {
+    workerId: string
     partId: string
     operationId: string
     durationMinutes: number
@@ -21,11 +22,13 @@ interface ManualEntryFormProps {
 export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryFormProps) {
   const supabase = createClient()
 
+  const [workers, setWorkers] = useState<Worker[]>([])
   const [parts, setParts] = useState<Part[]>([])
   const [operations, setOperations] = useState<Operation[]>([])
   const [attributes, setAttributes] = useState<VariantAttribute[]>([])
   const [attributeValues, setAttributeValues] = useState<Record<string, VariantAttributeValue[]>>({})
 
+  const [selectedWorkerId, setSelectedWorkerId] = useState(workerId || '')
   const [selectedPartId, setSelectedPartId] = useState('')
   const [selectedOperationId, setSelectedOperationId] = useState('')
   const [selectedAttributeValues, setSelectedAttributeValues] = useState<Record<string, string>>({})
@@ -37,6 +40,7 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
   const [note, setNote] = useState('')
 
   useEffect(() => {
+    fetchWorkers()
     fetchParts()
   }, [])
 
@@ -58,6 +62,19 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
       setSelectedAttributeValues({})
     }
   }, [selectedOperationId])
+
+  const fetchWorkers = async () => {
+    const { data, error } = await supabase
+      .from('workers')
+      .select('*')
+      .eq('active', true)
+      .order('order_index')
+    if (error) {
+      console.error('作業者取得エラー:', error)
+      alert(`作業者の取得に失敗しました: ${error.message}`)
+    }
+    if (data) setWorkers(data)
+  }
 
   const fetchParts = async () => {
     const { data, error } = await supabase
@@ -130,6 +147,11 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!selectedWorkerId) {
+      alert('作業者を選択してください')
+      return
+    }
+
     if (!selectedPartId || !selectedOperationId) {
       alert('部品と工程を選択してください')
       return
@@ -166,6 +188,7 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
     const attributeValueIds = Object.values(selectedAttributeValues).filter(Boolean)
 
     await onSubmit({
+      workerId: selectedWorkerId,
       partId: selectedPartId,
       operationId: selectedOperationId,
       durationMinutes,
@@ -176,6 +199,7 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
     })
 
     // フォームをリセット
+    setSelectedWorkerId(workerId || '')
     setSelectedPartId('')
     setSelectedOperationId('')
     setSelectedAttributeValues({})
@@ -189,6 +213,27 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-4">
+        {/* 作業者選択 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            作業者 <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={selectedWorkerId}
+            onChange={(e) => setSelectedWorkerId(e.target.value)}
+            required
+            disabled={loading}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+          >
+            <option value="">選択してください</option>
+            {workers.map((worker) => (
+              <option key={worker.worker_id} value={worker.worker_id}>
+                {worker.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* 部品選択 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -344,7 +389,7 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
 
       <button
         type="submit"
-        disabled={loading || !selectedPartId || !selectedOperationId}
+        disabled={loading || !selectedWorkerId || !selectedPartId || !selectedOperationId}
         className="w-full bg-indigo-600 text-white py-3 px-4 rounded-md font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? '登録中...' : '作業を登録'}

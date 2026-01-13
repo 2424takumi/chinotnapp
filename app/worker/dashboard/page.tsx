@@ -122,6 +122,7 @@ function DashboardContent() {
   }
 
   const handleManualSubmit = async (params: {
+    workerId: string
     partId: string
     operationId: string
     durationMinutes: number
@@ -130,8 +131,6 @@ function DashboardContent() {
     note: string
     attributeValueIds: string[]
   }) => {
-    if (!worker) return
-
     setLoading(true)
     try {
       const supabase = createClient()
@@ -140,7 +139,7 @@ function DashboardContent() {
       const { data: workLog, error: workLogError } = await supabase
         .from('work_logs')
         .insert({
-          worker_id: worker.worker_id,
+          worker_id: params.workerId,
           part_id: params.partId,
           operation_id: params.operationId,
           duration_minutes: params.durationMinutes,
@@ -291,13 +290,11 @@ function DashboardContent() {
               />
             )
           ) : (
-            worker && (
-              <ManualEntryForm
-                workerId={worker.worker_id}
-                onSubmit={handleManualSubmit}
-                loading={loading}
-              />
-            )
+            <ManualEntryForm
+              workerId={worker?.worker_id}
+              onSubmit={handleManualSubmit}
+              loading={loading}
+            />
           )}
         </div>
       </main>
