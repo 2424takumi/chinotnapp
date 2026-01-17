@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import type { Order, OrderItem, ProductVariantV2, Customer } from '@/lib/types/database';
 import { consumeInventoryForOrder, restoreInventoryForOrder } from '@/lib/services/orderInventoryService';
@@ -268,10 +269,10 @@ export default function OrdersPage() {
 
       await fetchOrders();
       setShowModal(false);
-      alert(editingOrder ? '受注を更新しました' : '受注を登録しました');
+      toast.success(editingOrder ? '受注を更新しました' : '受注を登録しました');
     } catch (error: any) {
       console.error('保存エラー:', error);
-      alert(`エラー: ${error.message}`);
+      toast.error(`エラー: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -320,10 +321,10 @@ export default function OrdersPage() {
 
       if (error) throw error;
       await fetchOrders();
-      alert('ステータスを更新しました');
+      toast.success('ステータスを更新しました');
     } catch (error: any) {
       console.error('ステータス更新エラー:', error);
-      alert(`エラー: ${error.message}`);
+      toast.error(`エラー: ${error.message}`);
     }
   };
 
@@ -352,7 +353,7 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">受注管理</h2>
+        <h2 className="text-2xl font-bold text-balance">受注管理</h2>
         <button
           onClick={handleNewOrder}
           className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
@@ -398,7 +399,7 @@ export default function OrdersPage() {
                 <td className="px-4 py-3">{order.customer_name}</td>
                 <td className="px-4 py-3">{order.order_date}</td>
                 <td className="px-4 py-3">{order.delivery_deadline || '—'}</td>
-                <td className="px-4 py-3">¥{order.total_amount?.toLocaleString() || 0}</td>
+                <td className="px-4 py-3 tabular-nums">¥{order.total_amount?.toLocaleString() || 0}</td>
                 <td className="px-4 py-3">{getStatusBadge(order.status)}</td>
                 <td className="px-4 py-3 text-center space-x-2">
                   <button
@@ -434,7 +435,7 @@ export default function OrdersPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 my-8 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">
+            <h3 className="text-lg font-semibold mb-4 text-balance">
               {editingOrder ? '受注を編集' : '新規受注'}
             </h3>
 
@@ -570,7 +571,7 @@ export default function OrdersPage() {
                           required
                           min="1"
                           placeholder="数量"
-                          className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm"
+                          className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm tabular-nums"
                         />
                       </div>
                       <div className="col-span-2">
@@ -582,10 +583,10 @@ export default function OrdersPage() {
                           min="0"
                           step="0.01"
                           placeholder="単価"
-                          className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm"
+                          className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm tabular-nums"
                         />
                       </div>
-                      <div className="col-span-2 text-sm">
+                      <div className="col-span-2 text-sm tabular-nums">
                         ¥{(item.quantity * item.unit_price).toLocaleString()}
                       </div>
                       <div className="col-span-1">
@@ -602,7 +603,7 @@ export default function OrdersPage() {
                 </div>
 
                 <div className="mt-4 text-right">
-                  <span className="text-lg font-semibold">
+                  <span className="text-lg font-semibold tabular-nums">
                     合計: ¥{calculateTotal().toLocaleString()}
                   </span>
                 </div>

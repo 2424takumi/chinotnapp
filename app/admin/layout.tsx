@@ -10,12 +10,12 @@ export default function AdminLayout({
 }) {
   return (
     <AuthGuard>
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-dvh bg-gray-100">
       {/* ヘッダー */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">管理画面</h1>
+            <h1 className="text-2xl font-bold text-gray-900 text-balance">管理画面</h1>
             <Link
               href="/worker/dashboard"
               className="text-sm text-blue-600 hover:underline"

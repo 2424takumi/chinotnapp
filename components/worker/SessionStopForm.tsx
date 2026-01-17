@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import type { ActiveSessionData } from '@/lib/services/sessionService'
 import type { VariantAttribute, VariantAttributeValue } from '@/lib/types/database'
@@ -139,7 +140,7 @@ export function SessionStopForm({
 
   const removeItem = (id: string) => {
     if (items.length === 1) {
-      alert('最低1つの種類が必要です')
+      toast.error('最低1つの種類が必要です')
       return
     }
     setItems(items.filter(item => item.id !== id))
@@ -175,7 +176,7 @@ export function SessionStopForm({
       // 属性値チェック
       const missingAttrs = attributes.filter(attr => !item.attributeValueIds[attr.attribute_id])
       if (missingAttrs.length > 0) {
-        alert(
+        toast.error(
           `種類${i + 1}: 以下の属性を選択してください: ${missingAttrs.map(a => a.name).join(', ')}`
         )
         return
@@ -184,14 +185,14 @@ export function SessionStopForm({
       // 数量チェック
       const qty = parseInt(item.quantity)
       if (isNaN(qty) || qty <= 0) {
-        alert(`種類${i + 1}: 完成数量を正しく入力してください`)
+        toast.error(`種類${i + 1}: 完成数量を正しく入力してください`)
         return
       }
 
       // 不良数チェック
       const lossQty = parseInt(item.lossQuantity)
       if (isNaN(lossQty) || lossQty < 0) {
-        alert(`種類${i + 1}: 不良数を正しく入力してください`)
+        toast.error(`種類${i + 1}: 不良数を正しく入力してください`)
         return
       }
     }
@@ -223,7 +224,7 @@ export function SessionStopForm({
       <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-6 border border-green-200">
         <div className="text-center mb-4">
           <div className="text-sm text-gray-600 mb-1">作業時間</div>
-          <div className="text-4xl font-bold text-gray-900 font-mono">
+          <div className="text-4xl font-bold text-gray-900 font-mono tabular-nums">
             {formatTime(elapsedTime)}
           </div>
         </div>
@@ -312,7 +313,7 @@ export function SessionStopForm({
                   required
                   min="1"
                   disabled={loading}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 tabular-nums"
                   placeholder="例: 10"
                 />
               </div>
@@ -326,7 +327,7 @@ export function SessionStopForm({
                   onChange={e => updateItem(item.id, 'lossQuantity', e.target.value)}
                   min="0"
                   disabled={loading}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 tabular-nums"
                   placeholder="例: 0"
                 />
               </div>

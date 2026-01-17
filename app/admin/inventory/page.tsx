@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import type { Worker, Part, Operation, ProductVariant, InventoryAdjustment } from '@/lib/types/database';
 
@@ -607,10 +608,10 @@ export default function InventoryPage() {
       // 編集モードを終了
       cancelEditLog();
 
-      alert('更新しました');
+      toast.success('更新しました');
     } catch (error) {
       console.error('更新エラー:', error);
-      alert('更新に失敗しました');
+      toast.error('更新に失敗しました');
     }
   };
 
@@ -635,10 +636,10 @@ export default function InventoryPage() {
       // モーダルを閉じる
       closeDetailModal();
 
-      alert('削除しました');
+      toast.success('削除しました');
     } catch (error) {
       console.error('削除エラー:', error);
-      alert('削除に失敗しました');
+      toast.error('削除に失敗しました');
     }
   };
 
@@ -700,8 +701,8 @@ export default function InventoryPage() {
   return (
     <div className="p-0 md:p-8">
       <div className="mb-4 md:mb-6 px-4 md:px-0">
-        <h1 className="text-xl md:text-2xl font-bold text-gray-800">工程別在庫状況</h1>
-        <p className="text-xs md:text-sm text-gray-600 mt-2">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-800 text-balance">工程別在庫状況</h1>
+        <p className="text-xs md:text-sm text-gray-600 mt-2 text-pretty">
           各部品の工程ごとの在庫数を表示しています（在庫0の工程は非表示）
         </p>
       </div>
@@ -710,12 +711,12 @@ export default function InventoryPage() {
         {/* 胴グループ */}
         {inventory.some(p => p.part_name.startsWith('胴')) && (
           <div className="bg-gray-100 rounded-lg p-3 md:p-6 shadow-sm">
-            <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">【胴】</h2>
+            <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4 text-balance">【胴】</h2>
 
             {inventory.filter(p => p.part_name.startsWith('胴')).map((partData) => (
               <div key={partData.part_id} className="mb-6 last:mb-0">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-base font-semibold text-gray-700">
+                  <h3 className="text-base font-semibold text-gray-700 text-balance">
                     {partData.part_name}
                   </h3>
                   <button
@@ -739,7 +740,7 @@ export default function InventoryPage() {
                           <div className="text-xs text-gray-600 mb-1">
                             {op.operation_name}
                           </div>
-                          <div className="text-xl md:text-2xl font-bold text-blue-600">
+                          <div className="text-xl md:text-2xl font-bold text-blue-600 tabular-nums">
                             {op.inventory}
                             <span className="text-xs md:text-sm text-gray-600 ml-1">個</span>
                           </div>
@@ -748,13 +749,13 @@ export default function InventoryPage() {
                               {op.variants.map(v => (
                                 <div key={v.variant_id} className="text-xs bg-orange-50 border border-orange-200 rounded px-2 py-1">
                                   <span className="text-orange-800 font-medium">{v.variant_name}</span>
-                                  <span className="text-orange-600 ml-1">× {v.inventory}</span>
+                                  <span className="text-orange-600 ml-1 tabular-nums">× {v.inventory}</span>
                                 </div>
                               ))}
                             </div>
                           )}
                           {shamisenInfo && (
-                            <div className="text-xs text-gray-500 mt-1">
+                            <div className="text-xs text-gray-500 mt-1 tabular-nums">
                               ({shamisenInfo.unit}{shamisenInfo.count}{shamisenInfo.unit === '三味線' ? '台' : '個'}分
                               {shamisenInfo.remainder > 0 && ` +余り${shamisenInfo.remainder}個`})
                               <div className="text-xs text-gray-400 mt-0.5">
@@ -767,7 +768,7 @@ export default function InventoryPage() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center text-gray-500 py-3 text-sm">
+                  <div className="text-center text-gray-500 py-3 text-sm text-pretty">
                     在庫なし（「+ 在庫追加」から登録できます）
                   </div>
                 )}
@@ -784,7 +785,7 @@ export default function InventoryPage() {
             >
               {/* 部品名ヘッダーと在庫追加ボタン */}
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg md:text-xl font-bold text-gray-800">
+                <h2 className="text-lg md:text-xl font-bold text-gray-800 text-balance">
                   【{partData.part_name}】
                 </h2>
                 <button
@@ -809,7 +810,7 @@ export default function InventoryPage() {
                         <div className="text-xs md:text-sm text-gray-600 mb-1 md:mb-2">
                           {op.operation_name}
                         </div>
-                        <div className="text-2xl md:text-3xl font-bold text-blue-600">
+                        <div className="text-2xl md:text-3xl font-bold text-blue-600 tabular-nums">
                           {op.inventory}
                           <span className="text-sm md:text-lg text-gray-600 ml-1">個</span>
                         </div>
@@ -818,13 +819,13 @@ export default function InventoryPage() {
                             {op.variants.map(v => (
                               <div key={v.variant_id} className="text-xs bg-orange-50 border border-orange-200 rounded px-2 py-1">
                                 <span className="text-orange-800 font-medium">{v.variant_name}</span>
-                                <span className="text-orange-600 ml-1">× {v.inventory}</span>
+                                <span className="text-orange-600 ml-1 tabular-nums">× {v.inventory}</span>
                               </div>
                             ))}
                           </div>
                         )}
                         {shamisenInfo && (
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs text-gray-500 mt-1 tabular-nums">
                             ({shamisenInfo.unit}{shamisenInfo.count}{shamisenInfo.unit === '三味線' ? '台' : '個'}分
                             {shamisenInfo.remainder > 0 && ` +余り${shamisenInfo.remainder}個`})
                             <div className="text-xs text-gray-400 mt-0.5">
@@ -837,7 +838,7 @@ export default function InventoryPage() {
                   })}
                 </div>
               ) : (
-                <div className="text-center text-gray-500 py-4">
+                <div className="text-center text-gray-500 py-4 text-pretty">
                   在庫なし（「+ 在庫追加」から登録できます）
                 </div>
               )}
@@ -849,7 +850,7 @@ export default function InventoryPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 my-8 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">
+            <h3 className="text-xl font-bold text-gray-800 mb-4 text-balance">
               在庫追加：{getPartName(selectedPartId!)}
             </h3>
 
@@ -995,16 +996,17 @@ export default function InventoryPage() {
             {/* ヘッダー */}
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h3 className="text-2xl font-bold text-gray-800">
+                <h3 className="text-2xl font-bold text-gray-800 text-balance">
                   {selectedInventoryDetail.partName} - {selectedInventoryDetail.operationName}
                 </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  現在の在庫: <span className="text-2xl font-bold text-blue-600">{selectedInventoryDetail.inventory}</span> 個
+                <p className="text-sm text-gray-600 mt-1 text-pretty">
+                  現在の在庫: <span className="text-2xl font-bold text-blue-600 tabular-nums">{selectedInventoryDetail.inventory}</span> 個
                 </p>
               </div>
               <button
                 onClick={closeDetailModal}
                 className="text-gray-500 hover:text-gray-700 text-2xl"
+                aria-label="閉じる"
               >
                 ×
               </button>
@@ -1012,7 +1014,7 @@ export default function InventoryPage() {
 
             {/* 在庫調整セクション */}
             <div className="bg-blue-50 rounded-lg p-4 mb-6">
-              <h4 className="text-lg font-semibold text-gray-800 mb-3">在庫調整</h4>
+              <h4 className="text-lg font-semibold text-gray-800 mb-3 text-balance">在庫調整</h4>
               <div className="flex gap-3">
                 <input
                   type="number"
@@ -1025,13 +1027,13 @@ export default function InventoryPage() {
                   onClick={async () => {
                     const qty = parseInt(adjustmentQuantity);
                     if (!qty || qty === 0) {
-                      alert('数量を入力してください');
+                      toast.error('数量を入力してください');
                       return;
                     }
 
                     const systemWorker = workers.find((w) => w.name === 'システム');
                     if (!systemWorker) {
-                      alert('システム作業者が見つかりません');
+                      toast.error('システム作業者が見つかりません');
                       return;
                     }
 
@@ -1050,10 +1052,10 @@ export default function InventoryPage() {
                       await fetchData();
                       setAdjustmentQuantity('');
                       closeDetailModal();
-                      alert('在庫調整を保存しました');
+                      toast.success('在庫調整を保存しました');
                     } catch (error) {
                       console.error('保存エラー:', error);
-                      alert('保存に失敗しました');
+                      toast.error('保存に失敗しました');
                     }
                   }}
                   className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700"
@@ -1061,16 +1063,16 @@ export default function InventoryPage() {
                   調整
                 </button>
               </div>
-              <p className="text-xs text-gray-600 mt-2">
+              <p className="text-xs text-gray-600 mt-2 text-pretty">
                 ※ プラス値で在庫追加、マイナス値で在庫減少します
               </p>
             </div>
 
             {/* 在庫調整履歴一覧 */}
             <div className="mb-6">
-              <h4 className="text-lg font-semibold text-gray-800 mb-3">在庫調整履歴</h4>
+              <h4 className="text-lg font-semibold text-gray-800 mb-3 text-balance">在庫調整履歴</h4>
               {inventoryAdjustmentLogs.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">在庫調整履歴がありません</p>
+                <p className="text-gray-500 text-center py-4 text-pretty">在庫調整履歴がありません</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -1092,7 +1094,7 @@ export default function InventoryPage() {
                               minute: '2-digit',
                             })}
                           </td>
-                          <td className={`p-2 text-right font-semibold ${adj.adjustment_quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <td className={`p-2 text-right font-semibold tabular-nums ${adj.adjustment_quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {adj.adjustment_quantity > 0 ? '+' : ''}{adj.adjustment_quantity}
                           </td>
                           <td className="p-2">{adj.note || '-'}</td>
@@ -1106,9 +1108,9 @@ export default function InventoryPage() {
 
             {/* 作業履歴一覧 */}
             <div>
-              <h4 className="text-lg font-semibold text-gray-800 mb-3">作業履歴</h4>
+              <h4 className="text-lg font-semibold text-gray-800 mb-3 text-balance">作業履歴</h4>
               {inventoryLogs.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">作業履歴がありません</p>
+                <p className="text-gray-500 text-center py-4 text-pretty">作業履歴がありません</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -1138,25 +1140,25 @@ export default function InventoryPage() {
                               })}
                             </td>
                             <td className="p-2">{worker?.name || '不明'}</td>
-                            <td className="p-2 text-right">
+                            <td className="p-2 text-right tabular-nums">
                               {isEditing ? (
                                 <input
                                   type="number"
                                   value={editFormData.quantity}
                                   onChange={(e) => setEditFormData({ ...editFormData, quantity: parseInt(e.target.value) || 0 })}
-                                  className="w-20 p-1 border rounded text-right"
+                                  className="w-20 p-1 border rounded text-right tabular-nums"
                                 />
                               ) : (
                                 log.quantity
                               )}
                             </td>
-                            <td className="p-2 text-right">
+                            <td className="p-2 text-right tabular-nums">
                               {isEditing ? (
                                 <input
                                   type="number"
                                   value={editFormData.loss_quantity}
                                   onChange={(e) => setEditFormData({ ...editFormData, loss_quantity: parseInt(e.target.value) || 0 })}
-                                  className="w-20 p-1 border rounded text-right"
+                                  className="w-20 p-1 border rounded text-right tabular-nums"
                                 />
                               ) : (
                                 log.loss_quantity

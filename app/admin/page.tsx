@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import type { Worker, Part, Operation } from '@/lib/types/database';
 import { getWorkerColorByName } from '@/lib/utils/colors';
@@ -159,11 +160,11 @@ export default function AdminLogsPage() {
 
       if (error) throw error;
 
-      alert('削除しました');
+      toast.success('削除しました');
       fetchLogs();
     } catch (error) {
       console.error('削除エラー:', error);
-      alert('削除に失敗しました');
+      toast.error('削除に失敗しました');
     }
   };
 

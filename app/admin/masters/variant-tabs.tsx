@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import type {
   Part,
@@ -59,7 +60,7 @@ export function VariantAttributesTab() {
       fetchAttributes();
     } catch (error) {
       console.error('保存エラー:', error);
-      alert('保存に失敗しました');
+      toast.error('保存に失敗しました');
     }
   };
 
@@ -91,12 +92,12 @@ export function VariantAttributesTab() {
 
       if (error) throw error;
 
-      alert('削除しました');
+      toast.success('削除しました');
       handleCancel();
       fetchAttributes();
     } catch (error) {
       console.error('削除エラー:', error);
-      alert('削除に失敗しました');
+      toast.error('削除に失敗しました');
     }
   };
 
@@ -292,7 +293,7 @@ export function VariantAttributeValuesTab() {
       fetchValues();
     } catch (error) {
       console.error('保存エラー:', error);
-      alert('保存に失敗しました');
+      toast.error('保存に失敗しました');
     }
   };
 
@@ -326,12 +327,12 @@ export function VariantAttributeValuesTab() {
 
       if (error) throw error;
 
-      alert('削除しました');
+      toast.success('削除しました');
       handleCancel();
       fetchValues();
     } catch (error) {
       console.error('削除エラー:', error);
-      alert('削除に失敗しました');
+      toast.error('削除に失敗しました');
     }
   };
 
@@ -621,7 +622,7 @@ export function ProductVariantsV2Tab() {
       fetchVariants();
     } catch (error) {
       console.error('保存エラー:', error);
-      alert('保存に失敗しました');
+      toast.error('保存に失敗しました');
     }
   };
 
@@ -671,12 +672,12 @@ export function ProductVariantsV2Tab() {
 
       if (variantError) throw variantError;
 
-      alert('削除しました');
+      toast.success('削除しました');
       handleCancel();
       fetchVariants();
     } catch (error) {
       console.error('削除エラー:', error);
-      alert('削除に失敗しました');
+      toast.error('削除に失敗しました');
     }
   };
 

@@ -16,6 +16,7 @@ import {
   type ActiveSessionData,
 } from '@/lib/services/sessionService'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 function DashboardContent() {
   const { worker } = useAuth()
@@ -55,7 +56,7 @@ function DashboardContent() {
       })
 
       if (error) {
-        alert(`エラー: ${error.message}`)
+        toast.error(`エラー: ${error.message}`)
         setLoading(false)
         return
       }
@@ -63,7 +64,7 @@ function DashboardContent() {
       // アクティブセッションを再取得
       await checkActiveSession()
     } catch (error: any) {
-      alert(`エラー: ${error.message}`)
+      toast.error(`エラー: ${error.message}`)
     } finally {
       setLoading(false)
     }
@@ -88,15 +89,15 @@ function DashboardContent() {
       })
 
       if (error) {
-        alert(`エラー: ${error.message}`)
+        toast.error(`エラー: ${error.message}`)
         setLoading(false)
         return
       }
 
-      alert('作業を完了しました')
+      toast.success('作業を完了しました')
       setActiveSession(null)
     } catch (error: any) {
-      alert(`エラー: ${error.message}`)
+      toast.error(`エラー: ${error.message}`)
     } finally {
       setLoading(false)
     }
@@ -110,15 +111,15 @@ function DashboardContent() {
       const { error } = await abandonSession(activeSession.session.session_id)
 
       if (error) {
-        alert(`エラー: ${error.message}`)
+        toast.error(`エラー: ${error.message}`)
         setLoading(false)
         return
       }
 
-      alert('作業をキャンセルしました')
+      toast.success('作業をキャンセルしました')
       setActiveSession(null)
     } catch (error: any) {
-      alert(`エラー: ${error.message}`)
+      toast.error(`エラー: ${error.message}`)
     } finally {
       setLoading(false)
     }
@@ -144,7 +145,7 @@ function DashboardContent() {
       const totalQuantity = params.items.reduce((sum, item) => sum + item.quantity, 0)
 
       if (totalQuantity === 0) {
-        alert('完成数量が0です。少なくとも1種類は数量を入力してください。')
+        toast.error('完成数量が0です。少なくとも1種類は数量を入力してください。')
         throw new Error('完成数量が0です')
       }
 
@@ -170,7 +171,7 @@ function DashboardContent() {
           .single()
 
         if (workLogError) {
-          alert(`エラー: ${workLogError.message}`)
+          toast.error(`エラー: ${workLogError.message}`)
           throw workLogError
         }
 
@@ -187,13 +188,13 @@ function DashboardContent() {
 
           if (logAttrError) {
             console.error('作業ログ属性の保存エラー:', logAttrError)
-            alert(`属性値の保存に失敗しました: ${logAttrError.message}`)
+            toast.error(`属性値の保存に失敗しました: ${logAttrError.message}`)
             throw logAttrError
           }
         }
       }
 
-      alert('作業を登録しました')
+      toast.success('作業を登録しました')
     } catch (error: any) {
       // エラーをそのまま再スロー（フォームリセットを防ぐため）
       throw error
@@ -216,27 +217,27 @@ function DashboardContent() {
 
   if (initialLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-dvh flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">読み込み中...</p>
+          <div className="animate-spin rounded-full size-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 text-pretty">読み込み中...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-dvh bg-gray-50">
       {/* ヘッダー */}
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900 text-balance">
                 作業ダッシュボード
               </h1>
               {worker && (
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-sm text-gray-600 text-pretty">
                   作業者: {worker.name}
                 </p>
               )}
@@ -288,7 +289,7 @@ function DashboardContent() {
             </div>
           )}
 
-          <h2 className="text-lg font-medium text-gray-900 mb-6">
+          <h2 className="text-lg font-medium text-gray-900 mb-6 text-balance">
             {activeSession
               ? '作業中'
               : mode === 'timer'

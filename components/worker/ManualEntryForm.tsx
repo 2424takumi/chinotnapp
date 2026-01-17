@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import type { Part, Operation, VariantAttribute, VariantAttributeValue, Worker } from '@/lib/types/database'
 
@@ -94,7 +95,7 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
       .order('order_index')
     if (error) {
       console.error('作業者取得エラー:', error)
-      alert(`作業者の取得に失敗しました: ${error.message}`)
+      toast.error(`作業者の取得に失敗しました: ${error.message}`)
     }
     if (data) setWorkers(data)
   }
@@ -107,7 +108,7 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
       .order('order_index')
     if (error) {
       console.error('部品取得エラー:', error)
-      alert(`部品の取得に失敗しました: ${error.message}`)
+      toast.error(`部品の取得に失敗しました: ${error.message}`)
     }
     if (data) setParts(data)
   }
@@ -121,7 +122,7 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
       .order('order_index')
     if (error) {
       console.error('工程取得エラー:', error)
-      alert(`工程の取得に失敗しました: ${error.message}`)
+      toast.error(`工程の取得に失敗しました: ${error.message}`)
     }
     if (data) setOperations(data)
   }
@@ -181,7 +182,7 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
 
   const removeItem = (id: string) => {
     if (items.length === 1) {
-      alert('最低1つの種類が必要です')
+      toast.error('最低1つの種類が必要です')
       return
     }
     setItems(items.filter(item => item.id !== id))
@@ -211,12 +212,12 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
     e.preventDefault()
 
     if (!selectedWorkerId) {
-      alert('作業者を選択してください')
+      toast.error('作業者を選択してください')
       return
     }
 
     if (!selectedPartId || !selectedOperationId) {
-      alert('部品と工程を選択してください')
+      toast.error('部品と工程を選択してください')
       return
     }
 
@@ -224,7 +225,7 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
     const parsedMinutes = parseInt(minutes) || 0
     const durationMinutes = parsedHours * 60 + parsedMinutes
     if (isNaN(durationMinutes) || durationMinutes <= 0) {
-      alert('作業時間を正しく入力してください（時間または分に有効な値を入力）')
+      toast.error('作業時間を正しく入力してください（時間または分に有効な値を入力）')
       return
     }
 
@@ -235,7 +236,7 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
       // 属性値チェック
       const missingAttrs = attributes.filter(attr => !item.attributeValueIds[attr.attribute_id])
       if (missingAttrs.length > 0) {
-        alert(
+        toast.error(
           `種類${i + 1}: 以下の属性を選択してください: ${missingAttrs.map(a => a.name).join(', ')}`
         )
         return
@@ -244,14 +245,14 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
       // 数量チェック
       const qty = parseInt(item.quantity)
       if (isNaN(qty) || qty <= 0) {
-        alert(`種類${i + 1}: 完成数量を正しく入力してください`)
+        toast.error(`種類${i + 1}: 完成数量を正しく入力してください`)
         return
       }
 
       // 不良数チェック
       const lossQty = parseInt(item.lossQuantity)
       if (isNaN(lossQty) || lossQty < 0) {
-        alert(`種類${i + 1}: 不良数を正しく入力してください`)
+        toast.error(`種類${i + 1}: 不良数を正しく入力してください`)
         return
       }
     }

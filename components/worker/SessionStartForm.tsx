@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Part, Operation } from '@/lib/types/database'
+import { toast } from 'sonner'
 
 interface SessionStartFormProps {
   workerId: string
@@ -45,7 +46,7 @@ export function SessionStartForm({ workerId, onStart, loading }: SessionStartFor
       .order('order_index')
     if (error) {
       console.error('部品取得エラー:', error)
-      alert(`部品の取得に失敗しました: ${error.message}`)
+      toast.error(`部品の取得に失敗しました: ${error.message}`)
     }
     if (data) setParts(data)
   }
@@ -59,7 +60,7 @@ export function SessionStartForm({ workerId, onStart, loading }: SessionStartFor
       .order('order_index')
     if (error) {
       console.error('工程取得エラー:', error)
-      alert(`工程の取得に失敗しました: ${error.message}`)
+      toast.error(`工程の取得に失敗しました: ${error.message}`)
     }
     if (data) setOperations(data)
   }
@@ -68,7 +69,7 @@ export function SessionStartForm({ workerId, onStart, loading }: SessionStartFor
     e.preventDefault()
 
     if (!selectedPartId || !selectedOperationId) {
-      alert('部品と工程を選択してください')
+      toast.error('部品と工程を選択してください')
       return
     }
 

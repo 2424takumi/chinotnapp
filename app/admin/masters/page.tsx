@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import type {
   Worker,
@@ -15,7 +16,7 @@ export default function MastersPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">マスタ管理</h2>
+      <h2 className="text-2xl font-bold text-balance">マスタ管理</h2>
 
       {/* タブ */}
       <div className="border-b">
@@ -170,7 +171,7 @@ function WorkersTab() {
       fetchWorkers();
     } catch (error) {
       console.error('保存エラー:', error);
-      alert('保存に失敗しました');
+      toast.error('保存に失敗しました');
     }
   };
 
@@ -200,12 +201,12 @@ function WorkersTab() {
 
       if (error) throw error;
 
-      alert('削除しました');
+      toast.success('削除しました');
       handleCancel();
       fetchWorkers();
     } catch (error) {
       console.error('削除エラー:', error);
-      alert('削除に失敗しました');
+      toast.error('削除に失敗しました');
     }
   };
 
@@ -241,7 +242,7 @@ function WorkersTab() {
         throw new Error(result.error || 'アカウント作成に失敗しました');
       }
 
-      alert('アカウントを設定しました');
+      toast.success('アカウントを設定しました');
       setShowAuthModal(false);
       setAuthWorker(null);
       setEmail('');
@@ -249,7 +250,7 @@ function WorkersTab() {
       fetchWorkers();
     } catch (error: any) {
       console.error('アカウント設定エラー:', error);
-      alert(`アカウント設定に失敗しました: ${error.message}`);
+      toast.error(`アカウント設定に失敗しました: ${error.message}`);
     }
   };
 
@@ -264,7 +265,7 @@ function WorkersTab() {
     <div className="space-y-6">
       {/* フォーム */}
       <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="font-medium mb-4">
+        <h3 className="font-medium mb-4 text-balance">
           {editing ? '編集' : '新規作業者'}
         </h3>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -397,7 +398,7 @@ function WorkersTab() {
       {showAuthModal && authWorker && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-medium mb-4">
+            <h3 className="text-lg font-medium mb-4 text-balance">
               ログインアカウント設定: {authWorker.name}
             </h3>
             <form onSubmit={handleAuthSubmit} className="space-y-4">
@@ -499,7 +500,7 @@ function PartsTab() {
       fetchParts();
     } catch (error) {
       console.error('保存エラー:', error);
-      alert('保存に失敗しました');
+      toast.error('保存に失敗しました');
     }
   };
 
@@ -529,12 +530,12 @@ function PartsTab() {
 
       if (error) throw error;
 
-      alert('削除しました');
+      toast.success('削除しました');
       handleCancel();
       fetchParts();
     } catch (error) {
       console.error('削除エラー:', error);
-      alert('削除に失敗しました');
+      toast.error('削除に失敗しました');
     }
   };
 
@@ -542,7 +543,7 @@ function PartsTab() {
     <div className="space-y-6">
       {/* フォーム */}
       <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="font-medium mb-4">
+        <h3 className="font-medium mb-4 text-balance">
           {editing ? '編集' : '新規部品'}
         </h3>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -770,7 +771,7 @@ function OperationsTab() {
       fetchOperations();
     } catch (error) {
       console.error('保存エラー:', error);
-      alert('保存に失敗しました');
+      toast.error('保存に失敗しました');
     }
   };
 
@@ -823,12 +824,12 @@ function OperationsTab() {
 
       if (error) throw error;
 
-      alert('削除しました');
+      toast.success('削除しました');
       handleCancel();
       fetchOperations();
     } catch (error) {
       console.error('削除エラー:', error);
-      alert('削除に失敗しました');
+      toast.error('削除に失敗しました');
     }
   };
 
@@ -850,7 +851,7 @@ function OperationsTab() {
     <div className="space-y-6">
       {/* フォーム */}
       <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="font-medium mb-4">
+        <h3 className="font-medium mb-4 text-balance">
           {editing ? '編集' : '新規工程'}
         </h3>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -920,7 +921,7 @@ function OperationsTab() {
 
           {/* 前工程在庫消費設定 */}
           <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-            <h4 className="text-sm font-semibold text-gray-800 mb-3">前工程在庫消費設定</h4>
+            <h4 className="text-sm font-semibold text-gray-800 mb-3 text-balance">前工程在庫消費設定</h4>
             <div className="space-y-3">
               <label className="flex items-start">
                 <input
@@ -931,7 +932,7 @@ function OperationsTab() {
                 />
                 <div>
                   <span className="text-sm font-medium">前工程在庫を消費する</span>
-                  <p className="text-xs text-gray-600 mt-1">
+                  <p className="text-xs text-gray-600 mt-1 text-pretty">
                     この工程で作業を記録すると、前工程の在庫が自動的に減ります<br />
                     例: 「皮はり」で5個作成 → 「帯鋸整形」の在庫が5個減る
                   </p>
@@ -951,7 +952,7 @@ function OperationsTab() {
                       onChange={(e) => setConsumptionQuantityPerUnit(e.target.value)}
                       className="w-32 border rounded px-3 py-2 text-sm"
                     />
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-gray-600 mt-1 text-pretty">
                       通常は「1」のままで問題ありません
                     </p>
                   </div>
@@ -965,7 +966,7 @@ function OperationsTab() {
                     />
                     <div>
                       <span className="text-sm font-medium">属性値を引き継ぐ</span>
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-gray-600 mt-1 text-pretty">
                         ONの場合、同じ属性値の在庫のみ消費します<br />
                         例: 「通常版」で作業 → 「通常版」の在庫のみ減る
                       </p>
@@ -1001,7 +1002,7 @@ function OperationsTab() {
                   </label>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 mt-1 text-pretty">
                 例: 「皮はり」工程では「皮デザイン」属性を選択すると、作業記録時に皮デザインを選択できます
               </p>
             </div>
@@ -1189,10 +1190,10 @@ function PricesTab() {
       }
       fetchPrices();
       handleCancel();
-      alert('保存しました');
+      toast.success('保存しました');
     } catch (error: any) {
       console.error('保存エラー:', error);
-      alert(`エラー: ${error.message}`);
+      toast.error(`エラー: ${error.message}`);
     }
   };
 
@@ -1224,10 +1225,10 @@ function PricesTab() {
       if (error) throw error;
       fetchPrices();
       handleCancel();
-      alert('削除しました');
+      toast.success('削除しました');
     } catch (error: any) {
       console.error('削除エラー:', error);
-      alert(`エラー: ${error.message}`);
+      toast.error(`エラー: ${error.message}`);
     }
   };
 
@@ -1235,7 +1236,7 @@ function PricesTab() {
     <div className="space-y-6">
       {/* フォーム */}
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow space-y-4">
-        <h3 className="text-lg font-semibold">{editing ? '価格設定を編集' : '新規価格設定'}</h3>
+        <h3 className="text-lg font-semibold text-balance">{editing ? '価格設定を編集' : '新規価格設定'}</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -1486,10 +1487,10 @@ function CustomersTab() {
 
       handleCancel();
       fetchCustomers();
-      alert('保存しました');
+      toast.success('保存しました');
     } catch (error: any) {
       console.error('保存エラー:', error);
-      alert(`エラー: ${error.message}`);
+      toast.error(`エラー: ${error.message}`);
     }
   };
 
@@ -1536,12 +1537,12 @@ function CustomersTab() {
         .eq('customer_id', editing.customer_id);
       if (error) throw error;
 
-      alert('削除しました');
+      toast.success('削除しました');
       handleCancel();
       fetchCustomers();
     } catch (error: any) {
       console.error('削除エラー:', error);
-      alert(`エラー: ${error.message}`);
+      toast.error(`エラー: ${error.message}`);
     }
   };
 
@@ -1549,7 +1550,7 @@ function CustomersTab() {
     <div className="space-y-6">
       {/* フォーム */}
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow space-y-4">
-        <h3 className="text-lg font-semibold">{editing ? '顧客を編集' : '新規顧客'}</h3>
+        <h3 className="text-lg font-semibold text-balance">{editing ? '顧客を編集' : '新規顧客'}</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
