@@ -21,17 +21,8 @@ export function useAuth() {
         logger.debug('[useAuth] ユーザー情報を取得中...')
         logger.debug('[useAuth] supabase.auth.getUser() を呼び出します...')
 
-        // タイムアウト付きでリクエスト
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('タイムアウト: 5秒以内に応答がありませんでした')), 5000)
-        )
-
-        const getUserPromise = supabase.auth.getUser()
-
-        const { data: { user }, error: userError } = await Promise.race([
-          getUserPromise,
-          timeoutPromise
-        ]) as any
+        // タイムアウトを削除して、通常のリクエストに変更
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
 
         logger.debug('[useAuth] supabase.auth.getUser() から応答を受け取りました')
 
