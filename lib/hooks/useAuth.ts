@@ -19,43 +19,39 @@ export function useAuth() {
     const getUser = async () => {
       try {
         logger.debug('[useAuth] ユーザー情報を取得中...')
-        logger.debug('[useAuth] supabase.auth.getUser() を呼び出します...')
 
-        // タイムアウトを削除して、通常のリクエストに変更
-        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        // まずセッションを確認
+        const { data: { session } } = await supabase.auth.getSession()
+        logger.debug('[useAuth] セッション確認:', session ? `User: ${session.user.email}` : 'セッションなし')
 
-        logger.debug('[useAuth] supabase.auth.getUser() から応答を受け取りました')
-
-        if (userError) {
-          logger.error('[useAuth] ユーザー取得エラー:', userError)
+        if (!session) {
+          logger.debug('[useAuth] セッションなし - 未ログイン状態')
           setUser(null)
           setWorker(null)
           setLoading(false)
           return
         }
 
-        logger.debug('[useAuth] ユーザー情報:', user ? `ID: ${user.id}, Email: ${user.email}` : 'なし')
+        // セッションがある場合、ユーザー情報を設定
+        const user = session.user
+        logger.debug('[useAuth] ユーザー情報:', `ID: ${user.id}, Email: ${user.email}`)
         setUser(user)
 
-        if (user) {
-          // ワーカー情報を取得
-          logger.debug('[useAuth] ワーカー情報を取得中... auth_user_id:', user.id)
-          const { data: workerData, error: workerError } = await supabase
-            .from('workers')
-            .select('*')
-            .eq('auth_user_id', user.id)
-            .eq('is_authenticated', true)
-            .maybeSingle()  // single()の代わりにmaybeSingle()を使用
+        // ワーカー情報を取得
+        logger.debug('[useAuth] ワーカー情報を取得中... auth_user_id:', user.id)
+        const { data: workerData, error: workerError } = await supabase
+          .from('workers')
+          .select('*')
+          .eq('auth_user_id', user.id)
+          .eq('is_authenticated', true)
+          .maybeSingle()
 
-          if (workerError) {
-            logger.error('[useAuth] ワーカー情報取得エラー:', workerError)
-          }
-
-          logger.debug('[useAuth] ワーカー情報:', workerData ? `ID: ${workerData.worker_id}, Name: ${workerData.name}` : 'なし')
-          setWorker(workerData)
-        } else {
-          setWorker(null)
+        if (workerError) {
+          logger.error('[useAuth] ワーカー情報取得エラー:', workerError)
         }
+
+        logger.debug('[useAuth] ワーカー情報:', workerData ? `ID: ${workerData.worker_id}, Name: ${workerData.name}` : 'なし')
+        setWorker(workerData)
 
         logger.debug('[useAuth] ローディング完了')
         setLoading(false)
