@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Order, OrderItem, ProductVariantV2, Customer } from '@/lib/types/database';
+import { consumeInventoryForOrder, restoreInventoryForOrder } from '@/lib/services/orderInventoryService';
 
 interface OrderWithDetails extends Order {
   order_items: (OrderItem & {
@@ -278,6 +279,33 @@ export default function OrdersPage() {
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     try {
+      // 現在のステータスを取得
+      const { data: currentOrder, error: fetchError } = await supabase
+        .from('orders')
+        .select('status')
+        .eq('order_id', orderId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentStatus = currentOrder?.status;
+
+      // 納品完了への変更の場合、在庫チェックと消費処理
+      if (newStatus === 'completed' && currentStatus !== 'completed') {
+        const { error: consumeError } = await consumeInventoryForOrder(orderId);
+        if (consumeError) {
+          throw consumeError;
+        }
+      }
+
+      // 納品完了から他のステータスへの変更（取り消し）の場合、在庫復元
+      if (currentStatus === 'completed' && newStatus !== 'completed') {
+        const { error: restoreError } = await restoreInventoryForOrder(orderId);
+        if (restoreError) {
+          throw restoreError;
+        }
+      }
+
       const updateData: any = { status: newStatus };
 
       // 納品完了の場合は納品日を設定

@@ -53,6 +53,7 @@ export default function InventoryPage() {
   const [variantAttributes, setVariantAttributes] = useState<any[]>([]);
   const [variantAttributeValues, setVariantAttributeValues] = useState<any[]>([]);
   const [processConsumptions, setProcessConsumptions] = useState<any[]>([]);
+  const [orderConsumptions, setOrderConsumptions] = useState<any[]>([]);
 
   // モーダル関連のstate
   const [showModal, setShowModal] = useState(false);
@@ -92,7 +93,7 @@ export default function InventoryPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [partsRes, operationsRes, logsRes, workersRes, consumptionsRes, bomRes, variantsRes, adjustmentsRes, opAttrsRes, vAttrsRes, vAttrValsRes, processConsRes] = await Promise.all([
+      const [partsRes, operationsRes, logsRes, workersRes, consumptionsRes, bomRes, variantsRes, adjustmentsRes, opAttrsRes, vAttrsRes, vAttrValsRes, processConsRes, orderConsRes] = await Promise.all([
         supabase.from('parts').select('*').eq('active', true).order('order_index'),
         supabase.from('operations').select('*').eq('active', true).order('order_index'),
         supabase.from('work_logs').select(`
@@ -133,6 +134,7 @@ export default function InventoryPage() {
         supabase.from('variant_attributes').select('*').eq('active', true),
         supabase.from('variant_attribute_values').select('*').eq('active', true),
         supabase.from('process_consumption').select('*'),
+        supabase.from('order_inventory_consumption').select('*').eq('is_deleted', false),
       ]);
 
       if (partsRes.data) setParts(partsRes.data);
@@ -147,6 +149,7 @@ export default function InventoryPage() {
       if (vAttrsRes.data) setVariantAttributes(vAttrsRes.data);
       if (vAttrValsRes.data) setVariantAttributeValues(vAttrValsRes.data);
       if (processConsRes.data) setProcessConsumptions(processConsRes.data);
+      if (orderConsRes.data) setOrderConsumptions(orderConsRes.data);
     } catch (error) {
       console.error('データ取得エラー:', error);
     } finally {
@@ -158,7 +161,7 @@ export default function InventoryPage() {
     if (parts.length > 0 && operations.length > 0 && logs.length > 0) {
       calculateInventory();
     }
-  }, [parts, operations, logs, adjustments, processConsumptions]);
+  }, [parts, operations, logs, adjustments, processConsumptions, orderConsumptions]);
 
   const calculateInventory = () => {
     const inventoryData: PartInventory[] = [];
@@ -207,6 +210,12 @@ export default function InventoryPage() {
           .filter((adj) => adj.operation_id === op.operation_id)
           .reduce((sum, adj) => sum + adj.adjustment_quantity, 0);
         inventory += adjustmentTotal;
+
+        // 受注消費を反映（納品完了時に最終工程から減る在庫）
+        const orderConsumedTotal = orderConsumptions
+          .filter((cons) => cons.operation_id === op.operation_id)
+          .reduce((sum, cons) => sum + cons.consumed_quantity, 0);
+        inventory -= orderConsumedTotal;
 
         // 属性値別在庫を計算
         let variantInventories: VariantInventory[] = [];
@@ -306,6 +315,30 @@ export default function InventoryPage() {
           // 工程間消費も属性値ごとに反映（この工程で消費された分を引く）
           const opConsumptions = processConsumptions.filter(pc => pc.consumed_operation_id === op.operation_id);
           opConsumptions.forEach((cons: any) => {
+            if (!cons.consumed_attribute_values || Object.keys(cons.consumed_attribute_values).length === 0) {
+              // 属性値が記録されていない消費は「未分類」から引く
+              const key = 'uncategorized';
+              const existing = combinationMap.get(key);
+              if (existing) {
+                existing.inventory -= cons.consumed_quantity;
+              }
+            } else {
+              // 属性値の組み合わせをキーとして使う
+              const consValueIds = Object.values(cons.consumed_attribute_values as Record<string, string>)
+                .filter((id: any) => id)
+                .sort();
+
+              const key = consValueIds.join('|');
+              const existing = combinationMap.get(key);
+              if (existing) {
+                existing.inventory -= cons.consumed_quantity;
+              }
+            }
+          });
+
+          // 受注消費も属性値ごとに反映（納品完了時に消費された分を引く）
+          const opOrderConsumptions = orderConsumptions.filter(oc => oc.operation_id === op.operation_id);
+          opOrderConsumptions.forEach((cons: any) => {
             if (!cons.consumed_attribute_values || Object.keys(cons.consumed_attribute_values).length === 0) {
               // 属性値が記録されていない消費は「未分類」から引く
               const key = 'uncategorized';
@@ -724,6 +757,9 @@ export default function InventoryPage() {
                             <div className="text-xs text-gray-500 mt-1">
                               ({shamisenInfo.unit}{shamisenInfo.count}{shamisenInfo.unit === '三味線' ? '台' : '個'}分
                               {shamisenInfo.remainder > 0 && ` +余り${shamisenInfo.remainder}個`})
+                              <div className="text-xs text-gray-400 mt-0.5">
+                                ※{shamisenInfo.unit}1{shamisenInfo.unit === '三味線' ? '台' : '個'}あたり{shamisenInfo.unitCount}個
+                              </div>
                             </div>
                           )}
                         </div>
@@ -791,6 +827,9 @@ export default function InventoryPage() {
                           <div className="text-xs text-gray-500 mt-1">
                             ({shamisenInfo.unit}{shamisenInfo.count}{shamisenInfo.unit === '三味線' ? '台' : '個'}分
                             {shamisenInfo.remainder > 0 && ` +余り${shamisenInfo.remainder}個`})
+                            <div className="text-xs text-gray-400 mt-0.5">
+                              ※{shamisenInfo.unit}1{shamisenInfo.unit === '三味線' ? '台' : '個'}あたり{shamisenInfo.unitCount}個
+                            </div>
                           </div>
                         )}
                       </div>

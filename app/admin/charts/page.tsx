@@ -30,6 +30,7 @@ interface WorkLog {
   duration_minutes: number;
   quantity: number;
   loss_quantity: number;
+  work_date: string;
   created_at: string;
 }
 
@@ -93,8 +94,8 @@ export default function ChartsPage() {
           operations(name, order_index)
         `)
         .eq('is_deleted', false)
-        .gte('created_at', `${dateFrom}T00:00:00`)
-        .lte('created_at', `${dateTo}T23:59:59`);
+        .gte('work_date', dateFrom)
+        .lte('work_date', dateTo);
 
       if (filterWorker) query = query.eq('worker_id', filterWorker);
       if (filterPart) query = query.eq('part_id', filterPart);
@@ -114,6 +115,7 @@ export default function ChartsPage() {
           duration_minutes: log.duration_minutes,
           quantity: log.quantity,
           loss_quantity: log.loss_quantity,
+          work_date: log.work_date,
           created_at: log.created_at,
         }));
         setLogs(formattedLogs);
@@ -132,13 +134,10 @@ export default function ChartsPage() {
     }
 
     // 最新の日付を取得
-    const allDates = logs.map((log) => new Date(log.created_at).toISOString().split('T')[0]);
+    const allDates = logs.map((log) => log.work_date);
     const latestDate = allDates.sort().reverse()[0];
 
-    const latestLogs = logs.filter((log) => {
-      const logDate = new Date(log.created_at).toISOString().split('T')[0];
-      return logDate === latestDate;
-    });
+    const latestLogs = logs.filter((log) => log.work_date === latestDate);
 
     if (latestLogs.length === 0) {
       return { chartData: [], totalTime: 0, totalQty: 0, totalGood: 0, date: latestDate, workers: [] };

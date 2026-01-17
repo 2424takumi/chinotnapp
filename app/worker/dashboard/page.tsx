@@ -56,6 +56,7 @@ function DashboardContent() {
 
       if (error) {
         alert(`エラー: ${error.message}`)
+        setLoading(false)
         return
       }
 
@@ -88,6 +89,7 @@ function DashboardContent() {
 
       if (error) {
         alert(`エラー: ${error.message}`)
+        setLoading(false)
         return
       }
 
@@ -109,6 +111,7 @@ function DashboardContent() {
 
       if (error) {
         alert(`エラー: ${error.message}`)
+        setLoading(false)
         return
       }
 
