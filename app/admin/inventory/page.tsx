@@ -56,6 +56,10 @@ export default function InventoryPage() {
   const [processConsumptions, setProcessConsumptions] = useState<any[]>([]);
   const [orderConsumptions, setOrderConsumptions] = useState<any[]>([]);
 
+  // バリエーション調整用の状態管理
+  const [variantAdjustQty, setVariantAdjustQty] = useState<Record<string, number>>({});
+  const [variantMoveQty, setVariantMoveQty] = useState<Record<string, number>>({});
+
   // モーダル関連のstate
   const [showModal, setShowModal] = useState(false);
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
@@ -74,6 +78,7 @@ export default function InventoryPage() {
     operationId: string;
     operationName: string;
     inventory: number;
+    variants?: VariantInventory[];
   } | null>(null);
   const [inventoryLogs, setInventoryLogs] = useState<WorkLog[]>([]);
   const [inventoryAdjustmentLogs, setInventoryAdjustmentLogs] = useState<InventoryAdjustment[]>([]);
@@ -536,13 +541,14 @@ export default function InventoryPage() {
   };
 
   // 在庫詳細モーダルを開く
-  const openDetailModal = async (partId: string, partName: string, operationId: string, operationName: string, inventory: number) => {
+  const openDetailModal = async (partId: string, partName: string, operationId: string, operationName: string, inventory: number, variants?: VariantInventory[]) => {
     setSelectedInventoryDetail({
       partId,
       partName,
       operationId,
       operationName,
       inventory,
+      variants,
     });
 
     // その工程の作業履歴を取得
@@ -643,6 +649,144 @@ export default function InventoryPage() {
     }
   };
 
+  // バリエーション在庫調整
+  const handleVariantAdjustment = async (
+    partId: string,
+    operationId: string,
+    variantId: string,
+    adjustmentQty: number,
+    note: string = ''
+  ) => {
+    const systemWorker = workers.find((w) => w.name === 'システム');
+    if (!systemWorker) {
+      toast.error('システム作業者が見つかりません');
+      return;
+    }
+
+    try {
+      // inventory_adjustments に保存
+      const { data: adjustment, error: adjustmentError } = await supabase
+        .from('inventory_adjustments')
+        .insert({
+          part_id: partId,
+          operation_id: operationId,
+          adjustment_quantity: adjustmentQty,
+          note: note || `在庫調整 ${adjustmentQty > 0 ? '+' : ''}${adjustmentQty}個`,
+          created_by: systemWorker.worker_id,
+        })
+        .select()
+        .single();
+
+      if (adjustmentError) throw adjustmentError;
+
+      // variant_idから属性値を取得して保存
+      if (adjustment && variantId !== 'uncategorized') {
+        const valueIds = variantId.split('|');
+        const attributeInserts = valueIds.map(valueId => ({
+          adjustment_id: adjustment.adjustment_id,
+          value_id: valueId,
+        }));
+
+        const { error: attrError } = await supabase
+          .from('inventory_adjustment_attributes')
+          .insert(attributeInserts);
+
+        if (attrError) {
+          console.error('属性値保存エラー:', attrError);
+        }
+      }
+
+      await fetchData();
+      toast.success(`在庫を${adjustmentQty > 0 ? '+' : ''}${adjustmentQty}個調整しました`);
+    } catch (error) {
+      console.error('在庫調整エラー:', error);
+      toast.error('在庫調整に失敗しました');
+    }
+  };
+
+  // 次工程への移動
+  const handleMoveToNextOperation = async (
+    partId: string,
+    currentOperationId: string,
+    variantId: string,
+    quantity: number
+  ) => {
+    const systemWorker = workers.find((w) => w.name === 'システム');
+    if (!systemWorker) {
+      toast.error('システム作業者が見つかりません');
+      return;
+    }
+
+    // 次の工程を取得
+    const partOperations = operations
+      .filter((op) => op.part_id === partId)
+      .sort((a, b) => a.order_index - b.order_index);
+
+    const currentOpIndex = partOperations.findIndex((op) => op.operation_id === currentOperationId);
+    const nextOperation = partOperations[currentOpIndex + 1];
+
+    if (!nextOperation) {
+      toast.error('次の工程がありません');
+      return;
+    }
+
+    try {
+      // work_logsに次工程の作業を記録
+      const { data: workLog, error: logError } = await supabase
+        .from('work_logs')
+        .insert({
+          worker_id: systemWorker.worker_id,
+          part_id: partId,
+          operation_id: nextOperation.operation_id,
+          duration_minutes: 1, // システムによる自動移動（最小値）
+          quantity: quantity,
+          loss_quantity: 0,
+          note: '前工程からの移動',
+        })
+        .select()
+        .single();
+
+      if (logError) throw logError;
+
+      // variant_idから属性値を取得して保存
+      if (workLog && variantId !== 'uncategorized') {
+        const valueIds = variantId.split('|');
+        const attributeInserts = valueIds.map(valueId => ({
+          work_log_id: workLog.log_id,
+          value_id: valueId,
+        }));
+
+        const { error: attrError } = await supabase
+          .from('work_log_attributes')
+          .insert(attributeInserts);
+
+        if (attrError) {
+          console.error('属性値保存エラー:', attrError);
+        }
+      }
+
+      // 現在の工程から在庫を減らす（process_consumptionに記録）
+      const { error: consumptionError } = await supabase
+        .from('process_consumption')
+        .insert({
+          work_log_id: workLog.log_id,
+          consumed_operation_id: currentOperationId,
+          consumed_quantity: quantity,
+          consumed_attribute_values: variantId !== 'uncategorized'
+            ? Object.fromEntries(variantId.split('|').map((id, idx) => [`attr_${idx}`, id]))
+            : {},
+        });
+
+      if (consumptionError) throw consumptionError;
+
+      await fetchData();
+      toast.success(`${quantity}個を次工程「${nextOperation.name}」に移動しました`);
+    } catch (error) {
+      console.error('次工程移動エラー:', error);
+      toast.error('次工程への移動に失敗しました');
+    }
+  };
+
   // 完成品（三味線）を作るのに必要な部品の個数を取得
   const getShamisen組Count = (partId: string, inventory: number) => {
     // まず完成品（三味線）で直接使われるか確認
@@ -734,34 +878,82 @@ export default function InventoryPage() {
                       return (
                         <div
                           key={op.operation_id}
-                          onClick={() => openDetailModal(partData.part_id, partData.part_name, op.operation_id, op.operation_name, op.inventory)}
+                          onClick={() => openDetailModal(partData.part_id, partData.part_name, op.operation_id, op.operation_name, op.inventory, op.variants)}
                           className="bg-white rounded-lg border-2 border-gray-300 p-2 md:p-3 shadow hover:shadow-md transition-shadow cursor-pointer hover:border-blue-400"
                         >
                           <div className="text-xs text-gray-600 mb-1">
                             {op.operation_name}
                           </div>
-                          <div className="text-xl md:text-2xl font-bold text-blue-600 tabular-nums">
-                            {op.inventory}
-                            <span className="text-xs md:text-sm text-gray-600 ml-1">個</span>
-                          </div>
-                          {op.variants && op.variants.length > 0 && (
-                            <div className="mt-2 space-y-1">
-                              {op.variants.map(v => (
-                                <div key={v.variant_id} className="text-xs bg-orange-50 border border-orange-200 rounded px-2 py-1">
-                                  <span className="text-orange-800 font-medium">{v.variant_name}</span>
-                                  <span className="text-orange-600 ml-1 tabular-nums">× {v.inventory}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {shamisenInfo && (
-                            <div className="text-xs text-gray-500 mt-1 tabular-nums">
-                              ({shamisenInfo.unit}{shamisenInfo.count}{shamisenInfo.unit === '三味線' ? '台' : '個'}分
-                              {shamisenInfo.remainder > 0 && ` +余り${shamisenInfo.remainder}個`})
-                              <div className="text-xs text-gray-400 mt-0.5">
-                                ※{shamisenInfo.unit}1{shamisenInfo.unit === '三味線' ? '台' : '個'}あたり{shamisenInfo.unitCount}個
+                          {/* バリアントがある場合は全体の個数を小さく表示 */}
+                          {op.variants && op.variants.length > 0 ? (
+                            <>
+                              <div className="text-xs text-gray-400 mb-2 tabular-nums">
+                                合計: {op.inventory}個
                               </div>
-                            </div>
+                              <div className="space-y-2">
+                                {op.variants.map(v => {
+                                  const tags: { text: string; color: string }[] = [];
+                                  const attributePairs = v.variant_name.split(',').map(pair => pair.trim());
+                                  attributePairs.forEach(pair => {
+                                    const [attrName, valueName] = pair.split(':').map(s => s.trim());
+                                    if (valueName) {
+                                      let color = 'bg-gray-100 text-gray-700';
+                                      if (valueName.includes('島村')) {
+                                        color = 'bg-blue-100 text-blue-700';
+                                      } else if (valueName.includes('通常')) {
+                                        color = 'bg-emerald-100 text-emerald-700';
+                                      } else if (valueName.includes('赤富士')) {
+                                        color = 'bg-rose-100 text-rose-700';
+                                      } else if (valueName.includes('花柄')) {
+                                        color = 'bg-pink-100 text-pink-700';
+                                      } else if (valueName.includes('唐草')) {
+                                        color = 'bg-purple-100 text-purple-700';
+                                      } else if (valueName.includes('無地')) {
+                                        color = 'bg-slate-100 text-slate-700';
+                                      }
+                                      tags.push({ text: valueName, color });
+                                    }
+                                  });
+
+                                  return (
+                                    <div
+                                      key={v.variant_id}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openDetailModal(partData.part_id, partData.part_name, op.operation_id, op.operation_name, op.inventory, op.variants);
+                                      }}
+                                      className="bg-white border-2 border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-blue-400 hover:shadow-md transition-all"
+                                    >
+                                      <div className="flex flex-wrap gap-1.5 mb-2">
+                                        {tags.map((tag, idx) => (
+                                          <span key={idx} className={`${tag.color} text-sm font-medium px-2.5 py-0.5 rounded-full`}>
+                                            {tag.text}
+                                          </span>
+                                        ))}
+                                      </div>
+                                      <div className="text-2xl font-bold text-gray-800 tabular-nums">
+                                        {v.inventory}
+                                        <span className="text-sm text-gray-600 ml-1">個</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-xl md:text-2xl font-bold text-blue-600 tabular-nums">
+                                {op.inventory}
+                                <span className="text-xs md:text-sm text-gray-600 ml-1">個</span>
+                              </div>
+                              {/* 糸巻き、胴-短手、胴-長手の場合、ちんとん換算を表示 */}
+                              {(partData.part_name === '糸巻き' || partData.part_name === '胴-短手' || partData.part_name === '胴-長手') && (
+                                <div className="text-xs text-gray-500 mt-1 tabular-nums">
+                                  ちんとん{Math.floor(op.inventory / 3)}個分
+                                  {op.inventory % 3 > 0 && ` +${op.inventory % 3}個`}
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       );
@@ -804,34 +996,82 @@ export default function InventoryPage() {
                     return (
                       <div
                         key={op.operation_id}
-                        onClick={() => openDetailModal(partData.part_id, partData.part_name, op.operation_id, op.operation_name, op.inventory)}
+                        onClick={() => openDetailModal(partData.part_id, partData.part_name, op.operation_id, op.operation_name, op.inventory, op.variants)}
                         className="bg-white rounded-lg border-2 border-gray-300 p-2 md:p-4 shadow hover:shadow-md transition-shadow cursor-pointer hover:border-blue-400"
                       >
                         <div className="text-xs md:text-sm text-gray-600 mb-1 md:mb-2">
                           {op.operation_name}
                         </div>
-                        <div className="text-2xl md:text-3xl font-bold text-blue-600 tabular-nums">
-                          {op.inventory}
-                          <span className="text-sm md:text-lg text-gray-600 ml-1">個</span>
-                        </div>
-                        {op.variants && op.variants.length > 0 && (
-                          <div className="mt-2 space-y-1">
-                            {op.variants.map(v => (
-                              <div key={v.variant_id} className="text-xs bg-orange-50 border border-orange-200 rounded px-2 py-1">
-                                <span className="text-orange-800 font-medium">{v.variant_name}</span>
-                                <span className="text-orange-600 ml-1 tabular-nums">× {v.inventory}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {shamisenInfo && (
-                          <div className="text-xs text-gray-500 mt-1 tabular-nums">
-                            ({shamisenInfo.unit}{shamisenInfo.count}{shamisenInfo.unit === '三味線' ? '台' : '個'}分
-                            {shamisenInfo.remainder > 0 && ` +余り${shamisenInfo.remainder}個`})
-                            <div className="text-xs text-gray-400 mt-0.5">
-                              ※{shamisenInfo.unit}1{shamisenInfo.unit === '三味線' ? '台' : '個'}あたり{shamisenInfo.unitCount}個
+                        {/* バリアントがある場合は全体の個数を小さく表示 */}
+                        {op.variants && op.variants.length > 0 ? (
+                          <>
+                            <div className="text-xs text-gray-400 mb-2 tabular-nums">
+                              合計: {op.inventory}個
                             </div>
-                          </div>
+                            <div className="space-y-2">
+                              {op.variants.map(v => {
+                                const tags: { text: string; color: string }[] = [];
+                                const attributePairs = v.variant_name.split(',').map(pair => pair.trim());
+                                attributePairs.forEach(pair => {
+                                  const [attrName, valueName] = pair.split(':').map(s => s.trim());
+                                  if (valueName) {
+                                    let color = 'bg-gray-100 text-gray-700';
+                                    if (valueName.includes('島村')) {
+                                      color = 'bg-blue-100 text-blue-700';
+                                    } else if (valueName.includes('通常')) {
+                                      color = 'bg-emerald-100 text-emerald-700';
+                                    } else if (valueName.includes('赤富士')) {
+                                      color = 'bg-rose-100 text-rose-700';
+                                    } else if (valueName.includes('花柄')) {
+                                      color = 'bg-pink-100 text-pink-700';
+                                    } else if (valueName.includes('唐草')) {
+                                      color = 'bg-purple-100 text-purple-700';
+                                    } else if (valueName.includes('無地')) {
+                                      color = 'bg-slate-100 text-slate-700';
+                                    }
+                                    tags.push({ text: valueName, color });
+                                  }
+                                });
+
+                                return (
+                                  <div
+                                    key={v.variant_id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openDetailModal(partData.part_id, partData.part_name, op.operation_id, op.operation_name, op.inventory, op.variants);
+                                    }}
+                                    className="bg-white border-2 border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-blue-400 hover:shadow-md transition-all"
+                                  >
+                                    <div className="flex flex-wrap gap-1.5 mb-2">
+                                      {tags.map((tag, idx) => (
+                                        <span key={idx} className={`${tag.color} text-sm font-medium px-2.5 py-0.5 rounded-full`}>
+                                          {tag.text}
+                                        </span>
+                                      ))}
+                                    </div>
+                                    <div className="text-3xl font-bold text-gray-800 tabular-nums">
+                                      {v.inventory}
+                                      <span className="text-base text-gray-600 ml-1">個</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-2xl md:text-3xl font-bold text-blue-600 tabular-nums">
+                              {op.inventory}
+                              <span className="text-sm md:text-lg text-gray-600 ml-1">個</span>
+                            </div>
+                            {/* 糸巻き、胴-短手、胴-長手の場合、ちんとん換算を表示 */}
+                            {(partData.part_name === '糸巻き' || partData.part_name === '胴-短手' || partData.part_name === '胴-長手') && (
+                              <div className="text-xs text-gray-500 mt-1 tabular-nums">
+                                ちんとん{Math.floor(op.inventory / 3)}個分
+                                {op.inventory % 3 > 0 && ` +${op.inventory % 3}個`}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     );
@@ -991,8 +1231,8 @@ export default function InventoryPage() {
 
       {/* 在庫詳細モーダル */}
       {showDetailModal && selectedInventoryDetail && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 my-8">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[85vh] overflow-y-auto p-6 my-8">
             {/* ヘッダー */}
             <div className="flex justify-between items-start mb-6">
               <div>
@@ -1012,61 +1252,183 @@ export default function InventoryPage() {
               </button>
             </div>
 
-            {/* 在庫調整セクション */}
-            <div className="bg-blue-50 rounded-lg p-4 mb-6">
-              <h4 className="text-lg font-semibold text-gray-800 mb-3 text-balance">在庫調整</h4>
-              <div className="flex gap-3">
-                <input
-                  type="number"
-                  value={adjustmentQuantity}
-                  onChange={(e) => setAdjustmentQuantity(e.target.value)}
-                  className="flex-1 p-3 border-2 border-gray-300 rounded-lg"
-                  placeholder="調整する数量を入力（マイナス可）"
-                />
-                <button
-                  onClick={async () => {
-                    const qty = parseInt(adjustmentQuantity);
-                    if (!qty || qty === 0) {
-                      toast.error('数量を入力してください');
-                      return;
-                    }
+            {/* バリエーション別在庫調整 */}
+            {selectedInventoryDetail.variants && selectedInventoryDetail.variants.length > 0 ? (
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-gray-800 mb-3">バリエーション別在庫</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {selectedInventoryDetail.variants.map(v => {
+                    const tags: { text: string; color: string }[] = [];
+                    const attributePairs = v.variant_name.split(',').map(pair => pair.trim());
+                    attributePairs.forEach(pair => {
+                      const [attrName, valueName] = pair.split(':').map(s => s.trim());
+                      if (valueName) {
+                        let color = 'bg-gray-100 text-gray-700';
+                        if (valueName.includes('島村')) {
+                          color = 'bg-blue-100 text-blue-700';
+                        } else if (valueName.includes('通常')) {
+                          color = 'bg-emerald-100 text-emerald-700';
+                        } else if (valueName.includes('赤富士')) {
+                          color = 'bg-rose-100 text-rose-700';
+                        } else if (valueName.includes('花柄')) {
+                          color = 'bg-pink-100 text-pink-700';
+                        } else if (valueName.includes('唐草')) {
+                          color = 'bg-purple-100 text-purple-700';
+                        } else if (valueName.includes('無地')) {
+                          color = 'bg-slate-100 text-slate-700';
+                        }
+                        tags.push({ text: valueName, color });
+                      }
+                    });
 
-                    const systemWorker = workers.find((w) => w.name === 'システム');
-                    if (!systemWorker) {
-                      toast.error('システム作業者が見つかりません');
-                      return;
-                    }
+                    const cardKey = `${selectedInventoryDetail.operationId}-${v.variant_id}`;
+                    const adjustQty = variantAdjustQty[cardKey] || 0;
+                    const moveQty = variantMoveQty[cardKey] || 0;
 
-                    try {
-                      const noteText = `${qty > 0 ? '+' : ''}${qty}個`;
-                      const { error } = await supabase.from('inventory_adjustments').insert({
-                        part_id: selectedInventoryDetail.partId,
-                        operation_id: selectedInventoryDetail.operationId,
-                        adjustment_quantity: qty,
-                        note: noteText,
-                        created_by: systemWorker.worker_id,
-                      });
+                    return (
+                      <div key={v.variant_id} className="bg-gray-50 border-2 border-gray-200 rounded-lg p-2.5">
+                        {/* タグ */}
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {tags.map((tag, idx) => (
+                            <span key={idx} className={`${tag.color} text-xs font-medium px-2 py-0.5 rounded-full`}>
+                              {tag.text}
+                            </span>
+                          ))}
+                        </div>
 
-                      if (error) throw error;
+                        {/* 現在の在庫 */}
+                        <div className="mb-2 text-center">
+                          <div className="text-xs text-gray-600 mb-0.5">現在の在庫</div>
+                          <div className="text-2xl font-bold text-gray-800 tabular-nums">
+                            {v.inventory}
+                            <span className="text-sm text-gray-600 ml-1">個</span>
+                          </div>
+                        </div>
 
-                      await fetchData();
-                      setAdjustmentQuantity('');
-                      closeDetailModal();
-                      toast.success('在庫調整を保存しました');
-                    } catch (error) {
-                      console.error('保存エラー:', error);
-                      toast.error('保存に失敗しました');
-                    }
-                  }}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700"
-                >
-                  調整
-                </button>
+                        {/* 在庫調整 */}
+                        <div className="mb-2 border-t pt-2">
+                          <div className="text-xs font-semibold text-gray-700 mb-1.5">在庫調整</div>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <input
+                              type="number"
+                              value={adjustQty}
+                              onChange={(e) => setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: parseInt(e.target.value) || 0 })}
+                              className="flex-1 px-2 py-1.5 border-2 border-gray-300 rounded text-center text-sm font-semibold tabular-nums"
+                              placeholder="調整数量"
+                            />
+                          </div>
+                          <button
+                            onClick={async () => {
+                              if (adjustQty === 0) return;
+                              await handleVariantAdjustment(
+                                selectedInventoryDetail.partId,
+                                selectedInventoryDetail.operationId,
+                                v.variant_id,
+                                adjustQty
+                              );
+                              setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: 0 });
+                            }}
+                            disabled={adjustQty === 0}
+                            className="w-full bg-blue-600 text-white px-2 py-1.5 rounded text-xs font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                          >
+                            調整を保存
+                          </button>
+                        </div>
+
+                        {/* 次工程へ移動 */}
+                        <div className="border-t pt-2">
+                          <div className="text-xs font-semibold text-gray-700 mb-1.5">次工程へ移動</div>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <input
+                              type="number"
+                              value={moveQty}
+                              onChange={(e) => setVariantMoveQty({ ...variantMoveQty, [cardKey]: parseInt(e.target.value) || 0 })}
+                              max={v.inventory}
+                              className="flex-1 px-2 py-1.5 border-2 border-gray-300 rounded text-center text-sm font-semibold tabular-nums"
+                              placeholder="数量"
+                            />
+                          </div>
+                          <button
+                            onClick={async () => {
+                              if (moveQty <= 0 || moveQty > v.inventory) {
+                                toast.error('数量を正しく入力してください');
+                                return;
+                              }
+                              await handleMoveToNextOperation(
+                                selectedInventoryDetail.partId,
+                                selectedInventoryDetail.operationId,
+                                v.variant_id,
+                                moveQty
+                              );
+                              setVariantMoveQty({ ...variantMoveQty, [cardKey]: 0 });
+                            }}
+                            disabled={moveQty <= 0 || moveQty > v.inventory}
+                            className="w-full bg-purple-600 text-white px-2 py-1.5 rounded text-xs font-medium hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                          >
+                            次工程へ移動
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <p className="text-xs text-gray-600 mt-2 text-pretty">
-                ※ プラス値で在庫追加、マイナス値で在庫減少します
-              </p>
-            </div>
+            ) : (
+              <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                <h4 className="text-lg font-semibold text-gray-800 mb-3 text-balance">在庫調整</h4>
+                <div className="flex gap-3">
+                  <input
+                    type="number"
+                    value={adjustmentQuantity}
+                    onChange={(e) => setAdjustmentQuantity(e.target.value)}
+                    className="flex-1 p-3 border-2 border-gray-300 rounded-lg"
+                    placeholder="調整する数量を入力（マイナス可）"
+                  />
+                  <button
+                    onClick={async () => {
+                      const qty = parseInt(adjustmentQuantity);
+                      if (!qty || qty === 0) {
+                        toast.error('数量を入力してください');
+                        return;
+                      }
+
+                      const systemWorker = workers.find((w) => w.name === 'システム');
+                      if (!systemWorker) {
+                        toast.error('システム作業者が見つかりません');
+                        return;
+                      }
+
+                      try {
+                        const noteText = `${qty > 0 ? '+' : ''}${qty}個`;
+                        const { error } = await supabase.from('inventory_adjustments').insert({
+                          part_id: selectedInventoryDetail.partId,
+                          operation_id: selectedInventoryDetail.operationId,
+                          adjustment_quantity: qty,
+                          note: noteText,
+                          created_by: systemWorker.worker_id,
+                        });
+
+                        if (error) throw error;
+
+                        await fetchData();
+                        setAdjustmentQuantity('');
+                        closeDetailModal();
+                        toast.success('在庫調整を保存しました');
+                      } catch (error) {
+                        console.error('保存エラー:', error);
+                        toast.error('保存に失敗しました');
+                      }
+                    }}
+                    className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700"
+                  >
+                    調整
+                  </button>
+                </div>
+                <p className="text-xs text-gray-600 mt-2 text-pretty">
+                  ※ プラス値で在庫追加、マイナス値で在庫減少します
+                </p>
+              </div>
+            )}
 
             {/* 在庫調整履歴一覧 */}
             <div className="mb-6">
@@ -1230,6 +1592,7 @@ export default function InventoryPage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
