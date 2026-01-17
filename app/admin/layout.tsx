@@ -9,7 +9,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthGuard>
+    <AuthGuard requireWorker={false}>
     <div className="min-h-dvh bg-gray-100">
       {/* ヘッダー */}
       <header className="bg-white shadow-sm">

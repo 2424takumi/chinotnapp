@@ -8,21 +8,22 @@ import { logger } from '@/lib/utils/logger'
 
 interface AuthGuardProps {
   children: React.ReactNode
+  requireWorker?: boolean // デフォルトはtrue
 }
 
-export function AuthGuard({ children }: AuthGuardProps) {
+export function AuthGuard({ children, requireWorker = true }: AuthGuardProps) {
   const { user, worker, loading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    logger.debug('[AuthGuard] useEffect:', { loading, hasUser: !!user, hasWorker: !!worker })
+    logger.debug('[AuthGuard] useEffect:', { loading, hasUser: !!user, hasWorker: !!worker, requireWorker })
     if (!loading) {
       if (!user) {
         // 未認証の場合はログインページにリダイレクト
         logger.debug('[AuthGuard] ユーザーなし → /login へリダイレクト')
         router.push('/login')
-      } else if (!worker) {
-        // ユーザーは存在するがワーカー情報がない場合
+      } else if (requireWorker && !worker) {
+        // ユーザーは存在するがワーカー情報がない場合（requireWorkerがtrueの場合のみ）
         logger.error('[AuthGuard] ワーカー情報が見つかりません。管理者にアカウント設定を依頼してください。')
         // ログアウトさせる
         signOut().then(() => {
@@ -33,7 +34,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
         logger.debug('[AuthGuard] 認証OK - コンテンツ表示')
       }
     }
-  }, [user, worker, loading, router])
+  }, [user, worker, loading, router, requireWorker])
 
   // ローディング中
   if (loading) {
@@ -53,8 +54,8 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return null
   }
 
-  // ユーザーは存在するがワーカー情報がない場合
-  if (!worker) {
+  // ユーザーは存在するがワーカー情報がない場合（requireWorkerがtrueの場合のみエラー表示）
+  if (requireWorker && !worker) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-gray-50">
         <div className="text-center p-6 bg-white rounded-lg shadow-md max-w-md">
