@@ -44,7 +44,8 @@ export function createClient() {
   client = createBrowserClient<Database>(url, key, {
     cookies: {
       get(name: string) {
-        // ブラウザのcookieから値を取得
+        // ブラウザ環境のみで実行
+        if (typeof window === 'undefined') return undefined
         const value = `; ${document.cookie}`
         const parts = value.split(`; ${name}=`)
         if (parts.length === 2) {
@@ -52,11 +53,13 @@ export function createClient() {
         }
       },
       set(name: string, value: string, options: any) {
-        // cookieに値を設定
+        // ブラウザ環境のみで実行
+        if (typeof window === 'undefined') return
         document.cookie = `${name}=${value}; path=/; ${options.maxAge ? `max-age=${options.maxAge};` : ''} ${options.sameSite ? `samesite=${options.sameSite};` : ''}`
       },
       remove(name: string, options: any) {
-        // cookieを削除
+        // ブラウザ環境のみで実行
+        if (typeof window === 'undefined') return
         document.cookie = `${name}=; path=/; max-age=0`
       }
     }
