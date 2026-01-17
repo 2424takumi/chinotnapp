@@ -26,7 +26,14 @@ export function createClient() {
       // ダミーのURLとキーでクライアントを作成（ビルド時のみ）
       client = createBrowserClient<Database>(
         'https://placeholder.supabase.co',
-        'placeholder-key'
+        'placeholder-key',
+        {
+          cookies: {
+            get() {},
+            set() {},
+            remove() {}
+          }
+        }
       )
       return client
     }
@@ -34,7 +41,26 @@ export function createClient() {
     throw new Error('Supabase環境変数が設定されていません')
   }
 
-  client = createBrowserClient<Database>(url, key)
+  client = createBrowserClient<Database>(url, key, {
+    cookies: {
+      get(name: string) {
+        // ブラウザのcookieから値を取得
+        const value = `; ${document.cookie}`
+        const parts = value.split(`; ${name}=`)
+        if (parts.length === 2) {
+          return parts.pop()?.split(';').shift()
+        }
+      },
+      set(name: string, value: string, options: any) {
+        // cookieに値を設定
+        document.cookie = `${name}=${value}; path=/; ${options.maxAge ? `max-age=${options.maxAge};` : ''} ${options.sameSite ? `samesite=${options.sameSite};` : ''}`
+      },
+      remove(name: string, options: any) {
+        // cookieを削除
+        document.cookie = `${name}=; path=/; max-age=0`
+      }
+    }
+  })
   logger.debug('[createClient] クライアント作成完了')
 
   return client
