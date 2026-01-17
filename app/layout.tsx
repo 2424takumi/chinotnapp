@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { Toaster } from "sonner";
 import "./globals.css";
+import { ToasterProvider } from "@/components/ToasterProvider";
 
 export const metadata: Metadata = {
   title: "小じゃみチントン生産管理",
@@ -16,7 +16,7 @@ export default function RootLayout({
     <html lang="ja">
       <body>
         {children}
-        <Toaster position="top-right" richColors />
+        <ToasterProvider />
       </body>
     </html>
   );
