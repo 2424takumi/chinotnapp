@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getWorkerColorByName } from '@/lib/utils/colors';
 import { getPartColorByName } from '@/lib/utils/partColors';
@@ -33,44 +33,53 @@ interface WorkLog {
   created_at: string;
 }
 
+// デフォルト日付を計算するユーティリティ
+function getDefaultDateRange() {
+  const today = new Date();
+  const monthAgo = new Date(today);
+  monthAgo.setDate(today.getDate() - 30);
+  return {
+    from: monthAgo.toISOString().split('T')[0],
+    to: today.toISOString().split('T')[0],
+  };
+}
+
 export default function ChartsPage() {
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  // 初期値を直接設定してuseEffectの分離問題を回避
+  const defaultRange = getDefaultDateRange();
+  const [dateFrom, setDateFrom] = useState(defaultRange.from);
+  const [dateTo, setDateTo] = useState(defaultRange.to);
   const [filterWorker, setFilterWorker] = useState<string>('');
   const [filterPart, setFilterPart] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   const [logs, setLogs] = useState<WorkLog[]>([]);
   const [workers, setWorkers] = useState<any[]>([]);
   const [parts, setParts] = useState<any[]>([]);
 
+  // マスターデータ取得
   useEffect(() => {
-    // デフォルトで過去30日間
-    const today = new Date();
-    const monthAgo = new Date(today);
-    monthAgo.setDate(today.getDate() - 30);
+    const fetchMasterData = async () => {
+      const [workersRes, partsRes] = await Promise.all([
+        supabase.from('workers').select('*').order('order_index'),
+        supabase.from('parts').select('*').order('order_index'),
+      ]);
 
-    setDateFrom(monthAgo.toISOString().split('T')[0]);
-    setDateTo(today.toISOString().split('T')[0]);
+      if (workersRes.data) setWorkers(workersRes.data);
+      if (partsRes.data) setParts(partsRes.data);
+      setInitialized(true);
+    };
 
     fetchMasterData();
   }, []);
 
+  // ログ取得（初期化完了後、フィルター変更時）
   useEffect(() => {
-    if (dateFrom && dateTo) {
+    if (initialized && dateFrom && dateTo) {
       fetchLogs();
     }
-  }, [dateFrom, dateTo, filterWorker, filterPart]);
-
-  const fetchMasterData = async () => {
-    const [workersRes, partsRes] = await Promise.all([
-      supabase.from('workers').select('*').order('order_index'),
-      supabase.from('parts').select('*').order('order_index'),
-    ]);
-
-    if (workersRes.data) setWorkers(workersRes.data);
-    if (partsRes.data) setParts(partsRes.data);
-  };
+  }, [initialized, dateFrom, dateTo, filterWorker, filterPart]);
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -204,8 +213,11 @@ export default function ChartsPage() {
 
     // 工程を部品順→工程順でソート
     const allOperations = Array.from(new Set(logs.map((l) => l.operation_name))).sort((a, b) => {
-      const infoA = operationInfoMap.get(a)!;
-      const infoB = operationInfoMap.get(b)!;
+      const infoA = operationInfoMap.get(a);
+      const infoB = operationInfoMap.get(b);
+
+      // データが見つからない場合はソート順を維持
+      if (!infoA || !infoB) return 0;
 
       // まず部品の順序で比較
       if (infoA.partOrder !== infoB.partOrder) {

@@ -143,7 +143,6 @@ function WorkersTab() {
 
     try {
       if (editing) {
-        // @ts-ignore
         const { error } = await supabase
           .from('workers')
           .update({
@@ -154,7 +153,6 @@ function WorkersTab() {
           .eq('worker_id', editing.worker_id);
         if (error) throw error;
       } else {
-        // @ts-ignore
         const { error } = await supabase
           .from('workers')
           .insert({
@@ -474,7 +472,6 @@ function PartsTab() {
 
     try {
       if (editing) {
-        // @ts-ignore
         const { error } = await supabase
           .from('parts')
           .update({
@@ -485,7 +482,6 @@ function PartsTab() {
           .eq('part_id', editing.part_id);
         if (error) throw error;
       } else {
-        // @ts-ignore
         const { error } = await supabase
           .from('parts')
           .insert({
@@ -701,7 +697,6 @@ function OperationsTab() {
       const consumptionQty = parseInt(consumptionQuantityPerUnit) || 1;
 
       if (editing) {
-        // @ts-ignore
         const { error } = await supabase
           .from('operations')
           .update({
@@ -720,7 +715,6 @@ function OperationsTab() {
           throw error;
         }
       } else {
-        // @ts-ignore
         const { data, error } = await supabase
           .from('operations')
           .insert({

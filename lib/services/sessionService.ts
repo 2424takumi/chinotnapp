@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { WorkSession, WorkSessionInsert, WorkSessionUpdate, WorkLog, WorkLogInsert } from '@/lib/types/database'
+import { logger } from '@/lib/utils/logger'
 
 export interface SessionStartParams {
   workerId: string
@@ -62,7 +63,7 @@ export async function startWorkSession(params: SessionStartParams) {
 
     return { data: session, error: null }
   } catch (error: any) {
-    console.error('セッション開始エラー:', error)
+    logger.error('セッション開始エラー:', error)
     return { data: null, error }
   }
 }
@@ -121,9 +122,40 @@ export async function stopWorkSession(params: SessionStopParams) {
     // 5. 各種類ごとに作業ログを作成
     const createdLogs: WorkLog[] = []
 
-    for (const item of params.items) {
-      // 時間を数量比で按分（最低1分）
-      const itemDuration = Math.max(1, Math.round((item.quantity / totalQuantity) * totalDurationMinutes))
+    // 時間按分を事前計算（合計がtotalDurationMinutesを超えないように調整）
+    const itemDurations: number[] = []
+    let allocatedTime = 0
+
+    for (let i = 0; i < params.items.length; i++) {
+      const item = params.items[i]
+      if (i === params.items.length - 1) {
+        // 最後のアイテムは残り時間を割り当て
+        itemDurations.push(Math.max(1, totalDurationMinutes - allocatedTime))
+      } else {
+        const duration = Math.max(1, Math.round((item.quantity / totalQuantity) * totalDurationMinutes))
+        itemDurations.push(duration)
+        allocatedTime += duration
+      }
+    }
+
+    // 属性値情報を一括で取得（N+1クエリ対策）
+    const allValueIds = [...new Set(params.items.flatMap(item => item.attributeValueIds))]
+    let attrValueMap: Record<string, string> = {}
+
+    if (allValueIds.length > 0) {
+      const { data: attrValues } = await supabase
+        .from('variant_attribute_values')
+        .select('value_id, attribute_id')
+        .in('value_id', allValueIds)
+
+      if (attrValues) {
+        attrValueMap = Object.fromEntries(attrValues.map(v => [v.value_id, v.attribute_id]))
+      }
+    }
+
+    for (let idx = 0; idx < params.items.length; idx++) {
+      const item = params.items[idx]
+      const itemDuration = itemDurations[idx]
 
       // 作業ログを作成
       const workLogInsert: WorkLogInsert = {
@@ -161,48 +193,41 @@ export async function stopWorkSession(params: SessionStopParams) {
           .insert(logAttributeInserts)
 
         if (logAttrError) {
-          console.error('作業ログ属性の保存エラー:', logAttrError)
+          // エラーを吸収せずにthrowする（データ整合性のため）
+          throw new Error(`作業ログ属性の保存に失敗しました: ${logAttrError.message}`)
         }
       }
 
       // 前工程在庫の自動消費処理
       if (operation?.consumes_previous_operation && previousOp) {
-        try {
-          const consumedQty = item.quantity * operation.consumption_quantity_per_unit
+        const consumedQty = item.quantity * operation.consumption_quantity_per_unit
 
-          // 属性値の組み合わせをJSONとして保存
-          let attributeValuesJson = null
-          if (operation.inherit_attributes && item.attributeValueIds.length > 0) {
-            const attrMap: Record<string, string> = {}
-            for (const valueId of item.attributeValueIds) {
-              const { data: attrValue } = await supabase
-                .from('variant_attribute_values')
-                .select('attribute_id')
-                .eq('value_id', valueId)
-                .single()
-
-              if (attrValue) {
-                attrMap[attrValue.attribute_id] = valueId
-              }
+        // 属性値の組み合わせをJSONとして保存（事前取得したマップを使用）
+        let attributeValuesJson = null
+        if (operation.inherit_attributes && item.attributeValueIds.length > 0) {
+          const attrMap: Record<string, string> = {}
+          for (const valueId of item.attributeValueIds) {
+            const attributeId = attrValueMap[valueId]
+            if (attributeId) {
+              attrMap[attributeId] = valueId
             }
-            attributeValuesJson = attrMap
           }
+          attributeValuesJson = Object.keys(attrMap).length > 0 ? attrMap : null
+        }
 
-          // process_consumption に記録
-          const { error: consumptionError } = await supabase
-            .from('process_consumption')
-            .insert({
-              work_log_id: workLog.log_id,
-              consumed_operation_id: previousOp.operation_id,
-              consumed_quantity: consumedQty,
-              consumed_attribute_values: attributeValuesJson,
-            })
+        // process_consumption に記録
+        const { error: consumptionError } = await supabase
+          .from('process_consumption')
+          .insert({
+            work_log_id: workLog.log_id,
+            consumed_operation_id: previousOp.operation_id,
+            consumed_quantity: consumedQty,
+            consumed_attribute_values: attributeValuesJson,
+          })
 
-          if (consumptionError) {
-            console.error('前工程消費の記録エラー:', consumptionError)
-          }
-        } catch (consumptionError) {
-          console.error('前工程消費処理エラー:', consumptionError)
+        if (consumptionError) {
+          // エラーを吸収せずにthrowする（在庫計算のデータ整合性のため）
+          throw new Error(`前工程消費の記録に失敗しました: ${consumptionError.message}`)
         }
       }
     }
@@ -220,7 +245,7 @@ export async function stopWorkSession(params: SessionStopParams) {
 
     return { data: createdLogs, error: null }
   } catch (error: any) {
-    console.error('セッション停止エラー:', error)
+    logger.error('セッション停止エラー:', error)
     return { data: null, error }
   }
 }
@@ -269,7 +294,7 @@ export async function getActiveSession(workerId: string): Promise<{ data: Active
 
     return { data: activeSessionData, error: null }
   } catch (error: any) {
-    console.error('アクティブセッション取得エラー:', error)
+    logger.error('アクティブセッション取得エラー:', error)
     return { data: null, error }
   }
 }
@@ -294,7 +319,7 @@ export async function abandonSession(sessionId: string) {
 
     return { error: null }
   } catch (error: any) {
-    console.error('セッション放棄エラー:', error)
+    logger.error('セッション放棄エラー:', error)
     return { error }
   }
 }

@@ -85,47 +85,60 @@ export default function AdminLogsPage() {
 
       if (error) throw error;
 
-      // 各ログの属性値を取得
-      const logsWithAttributes = await Promise.all(
-        (data || []).map(async (log: any) => {
-          // work_log_attributes から属性値を取得
-          const { data: attrData } = await supabase
-            .from('work_log_attributes')
-            .select(`
-              value_id,
-              variant_attribute_values (
-                name,
-                variant_attributes (name)
-              )
-            `)
-            .eq('work_log_id', log.log_id);
+      const logsData = data || [];
 
-          const attributeValues: AttributeValueInfo[] = (attrData || []).map((attr: any) => ({
-            attribute_name: attr.variant_attribute_values?.variant_attributes?.name || '',
-            value_name: attr.variant_attribute_values?.name || ''
-          }));
+      // 一括で全ログの属性値を取得（N+1クエリ対策）
+      const logIds = logsData.map((log: any) => log.log_id);
+      let attributeMap: Record<string, AttributeValueInfo[]> = {};
 
-          return {
-            log_id: log.log_id,
-            worker_id: log.worker_id,
-            worker_name: log.workers?.name || '不明',
-            part_id: log.part_id,
-            part_name: log.parts?.name || '不明',
-            operation_id: log.operation_id,
-            operation_name: log.operations?.name || '不明',
-            duration_minutes: log.duration_minutes,
-            quantity: log.quantity,
-            loss_quantity: log.loss_quantity,
-            note: log.note,
-            work_date: log.work_date,
-            session_id: log.session_id,
-            attribute_values: attributeValues,
-            created_at: log.created_at,
-            updated_at: log.updated_at,
-            updated_by: log.updated_by,
-          };
-        })
-      );
+      if (logIds.length > 0) {
+        const { data: allAttrData } = await supabase
+          .from('work_log_attributes')
+          .select(`
+            work_log_id,
+            value_id,
+            variant_attribute_values (
+              name,
+              variant_attributes (name)
+            )
+          `)
+          .in('work_log_id', logIds);
+
+        // ログIDごとに属性値をグループ化
+        if (allAttrData) {
+          for (const attr of allAttrData as any[]) {
+            const logId = attr.work_log_id;
+            if (!attributeMap[logId]) {
+              attributeMap[logId] = [];
+            }
+            attributeMap[logId].push({
+              attribute_name: attr.variant_attribute_values?.variant_attributes?.name || '',
+              value_name: attr.variant_attribute_values?.name || ''
+            });
+          }
+        }
+      }
+
+      // ログデータを整形
+      const logsWithAttributes = logsData.map((log: any) => ({
+        log_id: log.log_id,
+        worker_id: log.worker_id,
+        worker_name: log.workers?.name || '不明',
+        part_id: log.part_id,
+        part_name: log.parts?.name || '不明',
+        operation_id: log.operation_id,
+        operation_name: log.operations?.name || '不明',
+        duration_minutes: log.duration_minutes,
+        quantity: log.quantity,
+        loss_quantity: log.loss_quantity,
+        note: log.note,
+        work_date: log.work_date,
+        session_id: log.session_id,
+        attribute_values: attributeMap[log.log_id] || [],
+        created_at: log.created_at,
+        updated_at: log.updated_at,
+        updated_by: log.updated_by,
+      }));
 
       setLogs(logsWithAttributes);
     } catch (error) {

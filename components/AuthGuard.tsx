@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { signOut } from '@/lib/auth'
+import { logger } from '@/lib/utils/logger'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -14,29 +15,29 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter()
 
   useEffect(() => {
-    console.log('[AuthGuard] useEffect:', { loading, hasUser: !!user, hasWorker: !!worker })
+    logger.debug('[AuthGuard] useEffect:', { loading, hasUser: !!user, hasWorker: !!worker })
     if (!loading) {
       if (!user) {
         // 未認証の場合はログインページにリダイレクト
-        console.log('[AuthGuard] ユーザーなし → /login へリダイレクト')
+        logger.debug('[AuthGuard] ユーザーなし → /login へリダイレクト')
         router.push('/login')
       } else if (!worker) {
         // ユーザーは存在するがワーカー情報がない場合
-        console.error('[AuthGuard] ワーカー情報が見つかりません。管理者にアカウント設定を依頼してください。')
+        logger.error('[AuthGuard] ワーカー情報が見つかりません。管理者にアカウント設定を依頼してください。')
         // ログアウトさせる
         signOut().then(() => {
-          console.log('[AuthGuard] ログアウト完了 → /login へリダイレクト')
+          logger.debug('[AuthGuard] ログアウト完了 → /login へリダイレクト')
           router.push('/login')
         })
       } else {
-        console.log('[AuthGuard] 認証OK - コンテンツ表示')
+        logger.debug('[AuthGuard] 認証OK - コンテンツ表示')
       }
     }
   }, [user, worker, loading, router])
 
   // ローディング中
   if (loading) {
-    console.log('[AuthGuard] ローディング中を表示')
+    logger.debug('[AuthGuard] ローディング中を表示')
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
