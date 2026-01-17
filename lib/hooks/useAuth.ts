@@ -6,15 +6,21 @@ import { createClient } from '@/lib/supabase/client'
 import { Worker } from '@/lib/types/database'
 import { logger } from '@/lib/utils/logger'
 
-// コンポーネント外でクライアントを作成
-const supabase = createClient()
-
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [worker, setWorker] = useState<Worker | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // ブラウザ環境でのみクライアントを作成
+    if (typeof window === 'undefined') {
+      logger.debug('[useAuth] サーバーサイドでは実行しない')
+      setLoading(false)
+      return
+    }
+
+    const supabase = createClient()
+
     // 初回ロード時のユーザー取得
     const getUser = async () => {
       try {
