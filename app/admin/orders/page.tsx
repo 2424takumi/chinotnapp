@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Order, OrderItem, ProductVariantV2, Customer } from '@/lib/types/database';
 
@@ -314,9 +314,12 @@ export default function OrdersPage() {
     );
   };
 
-  const filteredOrders = filterStatus === 'all'
-    ? orders
-    : orders.filter((o) => o.status === filterStatus);
+  const filteredOrders = useMemo(() =>
+    filterStatus === 'all'
+      ? orders
+      : orders.filter((o) => o.status === filterStatus),
+    [orders, filterStatus]
+  );
 
   return (
     <div className="space-y-6">

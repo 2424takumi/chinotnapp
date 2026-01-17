@@ -220,9 +220,11 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
       return
     }
 
-    const durationMinutes = parseInt(hours) * 60 + parseInt(minutes)
-    if (durationMinutes <= 0) {
-      alert('作業時間を入力してください')
+    const parsedHours = parseInt(hours) || 0
+    const parsedMinutes = parseInt(minutes) || 0
+    const durationMinutes = parsedHours * 60 + parsedMinutes
+    if (isNaN(durationMinutes) || durationMinutes <= 0) {
+      alert('作業時間を正しく入力してください（時間または分に有効な値を入力）')
       return
     }
 

@@ -998,7 +998,6 @@ export default function InventoryPage() {
 
                     try {
                       const noteText = `${qty > 0 ? '+' : ''}${qty}個`;
-                      // @ts-ignore
                       const { error } = await supabase.from('inventory_adjustments').insert({
                         part_id: selectedInventoryDetail.partId,
                         operation_id: selectedInventoryDetail.operationId,

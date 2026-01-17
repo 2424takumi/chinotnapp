@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link';
+import { AuthGuard } from '@/components/AuthGuard';
 
 export default function AdminLayout({
   children,
@@ -6,6 +9,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
+    <AuthGuard>
     <div className="min-h-screen bg-gray-100">
       {/* ヘッダー */}
       <header className="bg-white shadow-sm">
@@ -65,5 +69,6 @@ export default function AdminLayout({
         {children}
       </main>
     </div>
+    </AuthGuard>
   );
 }
