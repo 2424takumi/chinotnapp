@@ -6,7 +6,7 @@ export function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  logger.debug('[createClient] クライアントを作成中...')
+  logger.debug('[createClient] 新しいクライアントを作成中...')
 
   if (!url || !key) {
     logger.error('[createClient] エラー: 環境変数が設定されていません')

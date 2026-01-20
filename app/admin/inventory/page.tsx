@@ -99,7 +99,8 @@ export default function InventoryPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [partsRes, operationsRes, logsRes, workersRes, consumptionsRes, bomRes, variantsRes, adjustmentsRes, opAttrsRes, vAttrsRes, vAttrValsRes, processConsRes, orderConsRes] = await Promise.all([
+      // データ取得にタイムアウト保護を追加（30秒）
+      const fetchPromise = Promise.all([
         supabase.from('parts').select('*').eq('active', true).order('order_index'),
         supabase.from('operations').select('*').eq('active', true).order('order_index'),
         supabase.from('work_logs').select(`
@@ -143,6 +144,15 @@ export default function InventoryPage() {
         supabase.from('order_inventory_consumption').select('*').eq('is_deleted', false),
       ]);
 
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('データ取得がタイムアウトしました（30秒）')), 30000)
+      );
+
+      const [partsRes, operationsRes, logsRes, workersRes, consumptionsRes, bomRes, variantsRes, adjustmentsRes, opAttrsRes, vAttrsRes, vAttrValsRes, processConsRes, orderConsRes] = await Promise.race([
+        fetchPromise,
+        timeoutPromise
+      ]);
+
       if (partsRes.data) setParts(partsRes.data);
       if (operationsRes.data) setOperations(operationsRes.data);
       if (logsRes.data) setLogs(logsRes.data);
@@ -158,6 +168,7 @@ export default function InventoryPage() {
       if (orderConsRes.data) setOrderConsumptions(orderConsRes.data);
     } catch (error) {
       console.error('データ取得エラー:', error);
+      toast.error('データの取得に失敗しました。ページを再読み込みしてください。');
     } finally {
       setLoading(false);
     }
