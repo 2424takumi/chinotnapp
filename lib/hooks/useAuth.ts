@@ -109,9 +109,6 @@ export function useAuth() {
       }
     }
 
-    // 初期セッションチェックを実行
-    initAuth()
-
     // 認証状態の変更を監視（将来の変更用）
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -185,6 +182,10 @@ export function useAuth() {
         }
       }
     )
+
+    // リスナー設定後に初期セッションチェックを実行
+    // これにより、ログイン時の状態変更もリスナーで確実にキャッチできる
+    initAuth()
 
     return () => {
       mountedRef.current = false
