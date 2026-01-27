@@ -59,6 +59,8 @@ export default function InventoryPage() {
   // バリエーション調整用の状態管理
   const [variantAdjustQty, setVariantAdjustQty] = useState<Record<string, number>>({});
   const [variantMoveQty, setVariantMoveQty] = useState<Record<string, number>>({});
+  const [adjusting, setAdjusting] = useState<Record<string, boolean>>({});
+  const [moving, setMoving] = useState<Record<string, boolean>>({});
 
   // モーダル関連のstate
   const [showModal, setShowModal] = useState(false);
@@ -704,6 +706,7 @@ export default function InventoryPage() {
 
         if (attrError) {
           console.error('属性値保存エラー:', attrError);
+          toast.warning('在庫調整は保存されましたが、バリエーション情報の保存に失敗しました');
         }
       }
 
@@ -773,6 +776,7 @@ export default function InventoryPage() {
 
         if (attrError) {
           console.error('属性値保存エラー:', attrError);
+          toast.warning('次工程への移動は記録されましたが、バリエーション情報の保存に失敗しました');
         }
       }
 
@@ -1323,27 +1327,47 @@ export default function InventoryPage() {
                           <div className="flex items-center gap-1.5 mb-1.5">
                             <input
                               type="number"
+                              min={-v.inventory}
+                              max={9999}
                               value={adjustQty}
-                              onChange={(e) => setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: parseInt(e.target.value) || 0 })}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                                if (!isNaN(value)) {
+                                  setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: value });
+                                }
+                              }}
                               className="flex-1 px-2 py-1.5 border-2 border-gray-300 rounded text-center text-sm font-semibold tabular-nums"
                               placeholder="±数量"
                             />
                           </div>
                           <button
                             onClick={async () => {
-                              if (adjustQty === 0) return;
-                              await handleVariantAdjustment(
-                                selectedInventoryDetail.partId,
-                                selectedInventoryDetail.operationId,
-                                v.variant_id,
-                                adjustQty
-                              );
-                              setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: 0 });
+                              if (adjustQty === 0 || adjusting[cardKey]) return;
+
+                              // 在庫がマイナスにならないかチェック
+                              const finalInventory = v.inventory + adjustQty;
+                              if (finalInventory < 0) {
+                                toast.error(`在庫が不足しています。現在の在庫: ${v.inventory}個（最大で-${v.inventory}個まで調整可能）`);
+                                return;
+                              }
+
+                              setAdjusting({ ...adjusting, [cardKey]: true });
+                              try {
+                                await handleVariantAdjustment(
+                                  selectedInventoryDetail.partId,
+                                  selectedInventoryDetail.operationId,
+                                  v.variant_id,
+                                  adjustQty
+                                );
+                                setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: 0 });
+                              } finally {
+                                setAdjusting({ ...adjusting, [cardKey]: false });
+                              }
                             }}
-                            disabled={adjustQty === 0}
+                            disabled={adjustQty === 0 || adjusting[cardKey]}
                             className="w-full bg-blue-600 text-white px-2 py-1.5 rounded text-xs font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                           >
-                            調整を保存
+                            {adjusting[cardKey] ? '保存中...' : '調整を保存'}
                           </button>
                         </div>
 
@@ -1353,31 +1377,45 @@ export default function InventoryPage() {
                           <div className="flex items-center gap-1.5 mb-1.5">
                             <input
                               type="number"
-                              value={moveQty}
-                              onChange={(e) => setVariantMoveQty({ ...variantMoveQty, [cardKey]: parseInt(e.target.value) || 0 })}
+                              min={1}
                               max={v.inventory}
+                              value={moveQty}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                                if (!isNaN(value)) {
+                                  setVariantMoveQty({ ...variantMoveQty, [cardKey]: value });
+                                }
+                              }}
                               className="flex-1 px-2 py-1.5 border-2 border-gray-300 rounded text-center text-sm font-semibold tabular-nums"
                               placeholder="数量"
                             />
                           </div>
                           <button
                             onClick={async () => {
-                              if (moveQty <= 0 || moveQty > v.inventory) {
-                                toast.error('数量を正しく入力してください');
+                              if (moveQty <= 0 || moveQty > v.inventory || moving[cardKey]) {
+                                if (moveQty <= 0 || moveQty > v.inventory) {
+                                  toast.error('数量を正しく入力してください');
+                                }
                                 return;
                               }
-                              await handleMoveToNextOperation(
-                                selectedInventoryDetail.partId,
-                                selectedInventoryDetail.operationId,
-                                v.variant_id,
-                                moveQty
-                              );
-                              setVariantMoveQty({ ...variantMoveQty, [cardKey]: 0 });
+
+                              setMoving({ ...moving, [cardKey]: true });
+                              try {
+                                await handleMoveToNextOperation(
+                                  selectedInventoryDetail.partId,
+                                  selectedInventoryDetail.operationId,
+                                  v.variant_id,
+                                  moveQty
+                                );
+                                setVariantMoveQty({ ...variantMoveQty, [cardKey]: 0 });
+                              } finally {
+                                setMoving({ ...moving, [cardKey]: false });
+                              }
                             }}
-                            disabled={moveQty <= 0 || moveQty > v.inventory}
+                            disabled={moveQty <= 0 || moveQty > v.inventory || moving[cardKey]}
                             className="w-full bg-purple-600 text-white px-2 py-1.5 rounded text-xs font-medium hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                           >
-                            次工程へ移動
+                            {moving[cardKey] ? '移動中...' : '次工程へ移動'}
                           </button>
                         </div>
                       </div>
@@ -1402,6 +1440,13 @@ export default function InventoryPage() {
                       const qty = parseInt(adjustmentQuantity);
                       if (!qty || qty === 0) {
                         toast.error('数量を入力してください');
+                        return;
+                      }
+
+                      // 在庫がマイナスにならないかチェック
+                      const finalInventory = selectedInventoryDetail.inventory + qty;
+                      if (finalInventory < 0) {
+                        toast.error(`在庫が不足しています。現在の在庫: ${selectedInventoryDetail.inventory}個（最大で-${selectedInventoryDetail.inventory}個まで調整可能）`);
                         return;
                       }
 
