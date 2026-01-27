@@ -1331,9 +1331,15 @@ export default function InventoryPage() {
                               max={9999}
                               value={adjustQty}
                               onChange={(e) => {
-                                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                                if (!isNaN(value)) {
-                                  setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: value });
+                                const input = e.target.value;
+                                // 空文字またはマイナス記号のみの場合は0、それ以外は数値に変換
+                                if (input === '' || input === '-') {
+                                  setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: 0 });
+                                } else {
+                                  const value = parseInt(input);
+                                  if (!isNaN(value)) {
+                                    setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: value });
+                                  }
                                 }
                               }}
                               className="flex-1 px-2 py-1.5 border-2 border-gray-300 rounded text-center text-sm font-semibold tabular-nums"
