@@ -263,7 +263,10 @@ export default function AdminLogsPage() {
             <label className="block text-sm mb-1">部品</label>
             <select
               value={filterPart}
-              onChange={(e) => setFilterPart(e.target.value)}
+              onChange={(e) => {
+                setFilterPart(e.target.value);
+                setFilterOperation(''); // 部品が変更されたら工程フィルタをクリア
+              }}
               className="w-full border rounded px-3 py-2"
             >
               <option value="">すべて</option>
@@ -283,11 +286,13 @@ export default function AdminLogsPage() {
               className="w-full border rounded px-3 py-2"
             >
               <option value="">すべて</option>
-              {operations.map((o) => (
-                <option key={o.operation_id} value={o.operation_id}>
-                  {o.name}
-                </option>
-              ))}
+              {operations
+                .filter((o) => !filterPart || o.part_id === filterPart) // 部品が選択されている場合、その部品の工程のみ表示
+                .map((o) => (
+                  <option key={o.operation_id} value={o.operation_id}>
+                    {o.name}
+                  </option>
+                ))}
             </select>
           </div>
 
