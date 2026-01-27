@@ -1318,14 +1318,15 @@ export default function InventoryPage() {
 
                         {/* 在庫調整 */}
                         <div className="mb-2 border-t pt-2">
-                          <div className="text-xs font-semibold text-gray-700 mb-1.5">在庫調整</div>
+                          <div className="text-xs font-semibold text-gray-700 mb-1">在庫調整</div>
+                          <div className="text-xs text-gray-500 mb-1.5">+で増加、-で減少</div>
                           <div className="flex items-center gap-1.5 mb-1.5">
                             <input
                               type="number"
                               value={adjustQty}
                               onChange={(e) => setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: parseInt(e.target.value) || 0 })}
                               className="flex-1 px-2 py-1.5 border-2 border-gray-300 rounded text-center text-sm font-semibold tabular-nums"
-                              placeholder="調整数量"
+                              placeholder="±数量"
                             />
                           </div>
                           <button
@@ -1386,14 +1387,15 @@ export default function InventoryPage() {
               </div>
             ) : (
               <div className="bg-blue-50 rounded-lg p-4 mb-6">
-                <h4 className="text-lg font-semibold text-gray-800 mb-3 text-balance">在庫調整</h4>
+                <h4 className="text-lg font-semibold text-gray-800 mb-2 text-balance">在庫調整</h4>
+                <p className="text-sm text-gray-600 mb-3">+で増加、-で減少</p>
                 <div className="flex gap-3">
                   <input
                     type="number"
                     value={adjustmentQuantity}
                     onChange={(e) => setAdjustmentQuantity(e.target.value)}
                     className="flex-1 p-3 border-2 border-gray-300 rounded-lg"
-                    placeholder="調整する数量を入力（マイナス可）"
+                    placeholder="±数量"
                   />
                   <button
                     onClick={async () => {
