@@ -1201,7 +1201,6 @@ export default function InventoryPage() {
               </label>
               <input
                 type="text"
-                inputMode="numeric"
                 value={adjustmentQuantity}
                 onChange={(e) => setAdjustmentQuantity(e.target.value)}
                 className="w-full p-3 border-2 border-gray-300 rounded-lg"
@@ -1327,7 +1326,6 @@ export default function InventoryPage() {
                           <div className="flex items-center gap-1.5 mb-1.5">
                             <input
                               type="text"
-                              inputMode="numeric"
                               value={adjustQty === 0 ? '' : adjustQty}
                               onChange={(e) => {
                                 const input = e.target.value;
@@ -1382,7 +1380,6 @@ export default function InventoryPage() {
                           <div className="flex items-center gap-1.5 mb-1.5">
                             <input
                               type="text"
-                              inputMode="numeric"
                               value={moveQty === 0 ? '' : moveQty}
                               onChange={(e) => {
                                 const input = e.target.value;
@@ -1439,7 +1436,6 @@ export default function InventoryPage() {
                 <div className="flex gap-3">
                   <input
                     type="text"
-                    inputMode="numeric"
                     value={adjustmentQuantity}
                     onChange={(e) => setAdjustmentQuantity(e.target.value)}
                     className="flex-1 p-3 border-2 border-gray-300 rounded-lg"
@@ -1574,7 +1570,6 @@ export default function InventoryPage() {
                               {isEditing ? (
                                 <input
                                   type="text"
-                                  inputMode="numeric"
                                   value={editFormData.quantity}
                                   onChange={(e) => setEditFormData({ ...editFormData, quantity: parseInt(e.target.value) || 0 })}
                                   className="w-20 p-1 border rounded text-right tabular-nums"
@@ -1587,7 +1582,6 @@ export default function InventoryPage() {
                               {isEditing ? (
                                 <input
                                   type="text"
-                                  inputMode="numeric"
                                   value={editFormData.loss_quantity}
                                   onChange={(e) => setEditFormData({ ...editFormData, loss_quantity: parseInt(e.target.value) || 0 })}
                                   className="w-20 p-1 border rounded text-right tabular-nums"
