@@ -1200,8 +1200,8 @@ export default function InventoryPage() {
                 数量 <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
-                min="1"
+                type="text"
+                inputMode="numeric"
                 value={adjustmentQuantity}
                 onChange={(e) => setAdjustmentQuantity(e.target.value)}
                 className="w-full p-3 border-2 border-gray-300 rounded-lg"
@@ -1326,14 +1326,13 @@ export default function InventoryPage() {
                           <div className="text-xs text-gray-500 mb-1.5">+で増加、-で減少</div>
                           <div className="flex items-center gap-1.5 mb-1.5">
                             <input
-                              type="number"
-                              min={-v.inventory}
-                              max={9999}
-                              value={adjustQty}
+                              type="text"
+                              inputMode="numeric"
+                              value={adjustQty === 0 ? '' : adjustQty}
                               onChange={(e) => {
                                 const input = e.target.value;
                                 // 空文字またはマイナス記号のみの場合は0、それ以外は数値に変換
-                                if (input === '' || input === '-') {
+                                if (input === '' || input === '-' || input === '+') {
                                   setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: 0 });
                                 } else {
                                   const value = parseInt(input);
@@ -1382,14 +1381,18 @@ export default function InventoryPage() {
                           <div className="text-xs font-semibold text-gray-700 mb-1.5">次工程へ移動</div>
                           <div className="flex items-center gap-1.5 mb-1.5">
                             <input
-                              type="number"
-                              min={1}
-                              max={v.inventory}
-                              value={moveQty}
+                              type="text"
+                              inputMode="numeric"
+                              value={moveQty === 0 ? '' : moveQty}
                               onChange={(e) => {
-                                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                                if (!isNaN(value)) {
-                                  setVariantMoveQty({ ...variantMoveQty, [cardKey]: value });
+                                const input = e.target.value;
+                                if (input === '') {
+                                  setVariantMoveQty({ ...variantMoveQty, [cardKey]: 0 });
+                                } else {
+                                  const value = parseInt(input);
+                                  if (!isNaN(value) && value >= 0) {
+                                    setVariantMoveQty({ ...variantMoveQty, [cardKey]: value });
+                                  }
                                 }
                               }}
                               className="flex-1 px-2 py-1.5 border-2 border-gray-300 rounded text-center text-sm font-semibold tabular-nums"
@@ -1435,7 +1438,8 @@ export default function InventoryPage() {
                 <p className="text-sm text-gray-600 mb-3">+で増加、-で減少</p>
                 <div className="flex gap-3">
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={adjustmentQuantity}
                     onChange={(e) => setAdjustmentQuantity(e.target.value)}
                     className="flex-1 p-3 border-2 border-gray-300 rounded-lg"
@@ -1569,7 +1573,8 @@ export default function InventoryPage() {
                             <td className="p-2 text-right tabular-nums">
                               {isEditing ? (
                                 <input
-                                  type="number"
+                                  type="text"
+                                  inputMode="numeric"
                                   value={editFormData.quantity}
                                   onChange={(e) => setEditFormData({ ...editFormData, quantity: parseInt(e.target.value) || 0 })}
                                   className="w-20 p-1 border rounded text-right tabular-nums"
@@ -1581,7 +1586,8 @@ export default function InventoryPage() {
                             <td className="p-2 text-right tabular-nums">
                               {isEditing ? (
                                 <input
-                                  type="number"
+                                  type="text"
+                                  inputMode="numeric"
                                   value={editFormData.loss_quantity}
                                   onChange={(e) => setEditFormData({ ...editFormData, loss_quantity: parseInt(e.target.value) || 0 })}
                                   className="w-20 p-1 border rounded text-right tabular-nums"
