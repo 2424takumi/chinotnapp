@@ -57,8 +57,8 @@ export default function InventoryPage() {
   const [orderConsumptions, setOrderConsumptions] = useState<any[]>([]);
 
   // バリエーション調整用の状態管理
-  const [variantAdjustQty, setVariantAdjustQty] = useState<Record<string, number>>({});
-  const [variantMoveQty, setVariantMoveQty] = useState<Record<string, number>>({});
+  const [variantAdjustQty, setVariantAdjustQty] = useState<Record<string, string>>({});
+  const [variantMoveQty, setVariantMoveQty] = useState<Record<string, string>>({});
   const [adjusting, setAdjusting] = useState<Record<string, boolean>>({});
   const [moving, setMoving] = useState<Record<string, boolean>>({});
 
@@ -1326,18 +1326,9 @@ export default function InventoryPage() {
                           <div className="flex items-center gap-1.5 mb-1.5">
                             <input
                               type="text"
-                              value={adjustQty === 0 ? '' : adjustQty}
+                              value={adjustQty || ''}
                               onChange={(e) => {
-                                const input = e.target.value;
-                                // 空文字またはマイナス記号のみの場合は0、それ以外は数値に変換
-                                if (input === '' || input === '-' || input === '+') {
-                                  setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: 0 });
-                                } else {
-                                  const value = parseInt(input);
-                                  if (!isNaN(value)) {
-                                    setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: value });
-                                  }
-                                }
+                                setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: e.target.value });
                               }}
                               className="flex-1 px-2 py-1.5 border-2 border-gray-300 rounded text-center text-sm font-semibold tabular-nums"
                               placeholder="±数量"
@@ -1345,10 +1336,13 @@ export default function InventoryPage() {
                           </div>
                           <button
                             onClick={async () => {
-                              if (adjustQty === 0 || adjusting[cardKey]) return;
+                              const input = adjustQty || '';
+                              const adjustQtyNum = parseInt(input);
+
+                              if (input === '' || isNaN(adjustQtyNum) || adjustQtyNum === 0 || adjusting[cardKey]) return;
 
                               // 在庫がマイナスにならないかチェック
-                              const finalInventory = v.inventory + adjustQty;
+                              const finalInventory = v.inventory + adjustQtyNum;
                               if (finalInventory < 0) {
                                 toast.error(`在庫が不足しています。現在の在庫: ${v.inventory}個（最大で-${v.inventory}個まで調整可能）`);
                                 return;
@@ -1360,14 +1354,14 @@ export default function InventoryPage() {
                                   selectedInventoryDetail.partId,
                                   selectedInventoryDetail.operationId,
                                   v.variant_id,
-                                  adjustQty
+                                  adjustQtyNum
                                 );
-                                setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: 0 });
+                                setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: '' });
                               } finally {
                                 setAdjusting({ ...adjusting, [cardKey]: false });
                               }
                             }}
-                            disabled={adjustQty === 0 || adjusting[cardKey]}
+                            disabled={!adjustQty || adjusting[cardKey]}
                             className="w-full bg-blue-600 text-white px-2 py-1.5 rounded text-xs font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                           >
                             {adjusting[cardKey] ? '保存中...' : '調整を保存'}
@@ -1380,17 +1374,9 @@ export default function InventoryPage() {
                           <div className="flex items-center gap-1.5 mb-1.5">
                             <input
                               type="text"
-                              value={moveQty === 0 ? '' : moveQty}
+                              value={moveQty || ''}
                               onChange={(e) => {
-                                const input = e.target.value;
-                                if (input === '') {
-                                  setVariantMoveQty({ ...variantMoveQty, [cardKey]: 0 });
-                                } else {
-                                  const value = parseInt(input);
-                                  if (!isNaN(value) && value >= 0) {
-                                    setVariantMoveQty({ ...variantMoveQty, [cardKey]: value });
-                                  }
-                                }
+                                setVariantMoveQty({ ...variantMoveQty, [cardKey]: e.target.value });
                               }}
                               className="flex-1 px-2 py-1.5 border-2 border-gray-300 rounded text-center text-sm font-semibold tabular-nums"
                               placeholder="数量"
@@ -1398,8 +1384,11 @@ export default function InventoryPage() {
                           </div>
                           <button
                             onClick={async () => {
-                              if (moveQty <= 0 || moveQty > v.inventory || moving[cardKey]) {
-                                if (moveQty <= 0 || moveQty > v.inventory) {
+                              const input = moveQty || '';
+                              const moveQtyNum = parseInt(input);
+
+                              if (input === '' || isNaN(moveQtyNum) || moveQtyNum <= 0 || moveQtyNum > v.inventory || moving[cardKey]) {
+                                if (input !== '' && (!isNaN(moveQtyNum) && (moveQtyNum <= 0 || moveQtyNum > v.inventory))) {
                                   toast.error('数量を正しく入力してください');
                                 }
                                 return;
@@ -1411,14 +1400,14 @@ export default function InventoryPage() {
                                   selectedInventoryDetail.partId,
                                   selectedInventoryDetail.operationId,
                                   v.variant_id,
-                                  moveQty
+                                  moveQtyNum
                                 );
-                                setVariantMoveQty({ ...variantMoveQty, [cardKey]: 0 });
+                                setVariantMoveQty({ ...variantMoveQty, [cardKey]: '' });
                               } finally {
                                 setMoving({ ...moving, [cardKey]: false });
                               }
                             }}
-                            disabled={moveQty <= 0 || moveQty > v.inventory || moving[cardKey]}
+                            disabled={!moveQty || moving[cardKey]}
                             className="w-full bg-purple-600 text-white px-2 py-1.5 rounded text-xs font-medium hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                           >
                             {moving[cardKey] ? '移動中...' : '次工程へ移動'}
