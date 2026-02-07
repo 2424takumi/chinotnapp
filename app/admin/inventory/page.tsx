@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import type { Worker, Part, Operation, ProductVariant, InventoryAdjustment } from '@/lib/types/database';
+import { createInventoryCalculator } from '@/lib/utils/inventoryCalculator';
+import type { PartInventory, VariantInventory, OperationInventory } from '@/lib/utils/inventoryCalculator';
 
 interface WorkLog {
   log_id: string;
@@ -19,26 +21,6 @@ interface WorkLog {
   created_at: string;
   updated_at: string;
   updated_by: string | null;
-}
-
-interface VariantInventory {
-  variant_id: string;
-  variant_name: string;
-  inventory: number;
-}
-
-interface OperationInventory {
-  operation_id: string;
-  operation_name: string;
-  order_index: number;
-  inventory: number;
-  variants?: VariantInventory[];
-}
-
-interface PartInventory {
-  part_id: string;
-  part_name: string;
-  operations: OperationInventory[];
 }
 
 export default function InventoryPage() {
@@ -182,251 +164,28 @@ export default function InventoryPage() {
     }
   }, [parts, operations, logs, adjustments, processConsumptions, orderConsumptions]);
 
+  /**
+   * Optimized inventory calculation using InventoryCalculator
+   *
+   * ## Performance Improvement
+   * - Complexity: O(n³) → O(n)
+   * - Uses Map-based indexing for constant-time lookups
+   *
+   * @see /lib/utils/inventoryCalculator.ts
+   */
   const calculateInventory = () => {
-    const inventoryData: PartInventory[] = [];
+    const calculator = createInventoryCalculator(
+      logs,
+      adjustments,
+      bomConsumptions,
+      processConsumptions,
+      orderConsumptions,
+      operations,
+      variants,
+      operationAttributes
+    );
 
-    parts.forEach((part) => {
-      const partOperations = operations.filter((op) => op.part_id === part.part_id);
-
-      // 各工程の累計生産数を計算（良品数と総数の両方）
-      const operationTotals = partOperations.map((op) => {
-        const goodTotal = logs
-          .filter((log) => log.operation_id === op.operation_id)
-          .reduce((sum, log) => sum + (log.quantity - log.loss_quantity), 0);
-        const totalQuantity = logs
-          .filter((log) => log.operation_id === op.operation_id)
-          .reduce((sum, log) => sum + log.quantity, 0);
-        return {
-          operation_id: op.operation_id,
-          operation_name: op.name,
-          order_index: op.order_index,
-          goodTotal,
-          totalQuantity,
-        };
-      });
-
-      // order_indexでソート
-      operationTotals.sort((a, b) => a.order_index - b.order_index);
-
-      // 各工程の在庫を計算（前工程の良品数 - 自工程の総数 - BOM消費数 + 在庫調整）
-      const operationInventories: OperationInventory[] = operationTotals.map((op, index) => {
-        const nextOp = operationTotals[index + 1];
-        // 前工程の良品数 - 次工程の総数（ロス含む） = 基本在庫
-        let inventory = nextOp ? op.goodTotal - nextOp.totalQuantity : op.goodTotal;
-
-        // BOM消費数を引く：この部品が他の工程で消費された数
-        const consumed = bomConsumptions
-          .filter((c) => c.consumed_part_id === part.part_id)
-          .reduce((sum, c) => sum + c.consumed_quantity, 0);
-
-        // 最終工程の在庫からのみBOM消費を引く
-        if (!nextOp) {
-          inventory -= consumed;
-        }
-
-        // 在庫調整を反映
-        const adjustmentTotal = adjustments
-          .filter((adj) => adj.operation_id === op.operation_id)
-          .reduce((sum, adj) => sum + adj.adjustment_quantity, 0);
-        inventory += adjustmentTotal;
-
-        // 受注消費を反映（納品完了時に最終工程から減る在庫）
-        const orderConsumedTotal = orderConsumptions
-          .filter((cons) => cons.operation_id === op.operation_id)
-          .reduce((sum, cons) => sum + cons.consumed_quantity, 0);
-        inventory -= orderConsumedTotal;
-
-        // 属性値別在庫を計算
-        let variantInventories: VariantInventory[] = [];
-
-        // この工程に設定されている属性を確認
-        const opAttrs = operationAttributes.filter(oa => oa.operation_id === op.operation_id);
-
-        if (opAttrs.length > 0) {
-          // 属性が設定されている場合、属性値の組み合わせごとに在庫を計算
-          const attributeIds = opAttrs.map(oa => oa.attribute_id);
-
-          // この工程のログを取得
-          const opLogs = logs.filter(log => log.operation_id === op.operation_id);
-
-          // 属性値の組み合わせごとにグループ化
-          const combinationMap = new Map<string, { valueIds: string[]; valueName: string; inventory: number }>();
-
-          // 作業ログから集計
-          opLogs.forEach(log => {
-            if (!log.work_log_attributes || log.work_log_attributes.length === 0) {
-              // 属性値が記録されていないログは「未分類」として扱う
-              const key = 'uncategorized';
-              const existing = combinationMap.get(key) || { valueIds: [], valueName: '未分類', inventory: 0 };
-              existing.inventory += (log.quantity - log.loss_quantity);
-              combinationMap.set(key, existing);
-            } else {
-              // 属性値の組み合わせをキーとして使う
-              const logValueIds = log.work_log_attributes
-                .map((attr: any) => attr.value_id)
-                .filter((id: string) => id)
-                .sort();
-
-              const key = logValueIds.join('|');
-
-              if (!combinationMap.has(key)) {
-                // 属性値名を作成
-                const valueNames = log.work_log_attributes
-                  .filter((attr: any) => attr.variant_attribute_values)
-                  .map((attr: any) => {
-                    const attrData = attr.variant_attribute_values;
-                    return `${attrData.variant_attributes?.name || ''}:${attrData.name || ''}`;
-                  })
-                  .join(', ');
-
-                combinationMap.set(key, {
-                  valueIds: logValueIds,
-                  valueName: valueNames || '不明',
-                  inventory: 0
-                });
-              }
-
-              const existing = combinationMap.get(key)!;
-              existing.inventory += (log.quantity - log.loss_quantity);
-            }
-          });
-
-          // 在庫調整も属性値ごとに反映
-          const opAdjustments = adjustments.filter(adj => adj.operation_id === op.operation_id);
-          opAdjustments.forEach((adj: any) => {
-            if (!adj.inventory_adjustment_attributes || adj.inventory_adjustment_attributes.length === 0) {
-              // 属性値が記録されていない在庫調整は「未分類」として扱う
-              const key = 'uncategorized';
-              const existing = combinationMap.get(key) || { valueIds: [], valueName: '未分類', inventory: 0 };
-              existing.inventory += adj.adjustment_quantity;
-              combinationMap.set(key, existing);
-            } else {
-              // 属性値の組み合わせをキーとして使う
-              const adjValueIds = adj.inventory_adjustment_attributes
-                .map((attr: any) => attr.value_id)
-                .filter((id: string) => id)
-                .sort();
-
-              const key = adjValueIds.join('|');
-
-              if (!combinationMap.has(key)) {
-                // 属性値名を作成
-                const valueNames = adj.inventory_adjustment_attributes
-                  .filter((attr: any) => attr.variant_attribute_values)
-                  .map((attr: any) => {
-                    const attrData = attr.variant_attribute_values;
-                    return `${attrData.variant_attributes?.name || ''}:${attrData.name || ''}`;
-                  })
-                  .join(', ');
-
-                combinationMap.set(key, {
-                  valueIds: adjValueIds,
-                  valueName: valueNames || '不明',
-                  inventory: 0
-                });
-              }
-
-              const existing = combinationMap.get(key)!;
-              existing.inventory += adj.adjustment_quantity;
-            }
-          });
-
-          // 工程間消費も属性値ごとに反映（この工程で消費された分を引く）
-          const opConsumptions = processConsumptions.filter(pc => pc.consumed_operation_id === op.operation_id);
-          opConsumptions.forEach((cons: any) => {
-            if (!cons.consumed_attribute_values || Object.keys(cons.consumed_attribute_values).length === 0) {
-              // 属性値が記録されていない消費は「未分類」から引く
-              const key = 'uncategorized';
-              const existing = combinationMap.get(key);
-              if (existing) {
-                existing.inventory -= cons.consumed_quantity;
-              }
-            } else {
-              // 属性値の組み合わせをキーとして使う
-              const consValueIds = Object.values(cons.consumed_attribute_values as Record<string, string>)
-                .filter((id: any) => id)
-                .sort();
-
-              const key = consValueIds.join('|');
-              const existing = combinationMap.get(key);
-              if (existing) {
-                existing.inventory -= cons.consumed_quantity;
-              }
-            }
-          });
-
-          // 受注消費も属性値ごとに反映（納品完了時に消費された分を引く）
-          const opOrderConsumptions = orderConsumptions.filter(oc => oc.operation_id === op.operation_id);
-          opOrderConsumptions.forEach((cons: any) => {
-            if (!cons.consumed_attribute_values || Object.keys(cons.consumed_attribute_values).length === 0) {
-              // 属性値が記録されていない消費は「未分類」から引く
-              const key = 'uncategorized';
-              const existing = combinationMap.get(key);
-              if (existing) {
-                existing.inventory -= cons.consumed_quantity;
-              }
-            } else {
-              // 属性値の組み合わせをキーとして使う
-              const consValueIds = Object.values(cons.consumed_attribute_values as Record<string, string>)
-                .filter((id: any) => id)
-                .sort();
-
-              const key = consValueIds.join('|');
-              const existing = combinationMap.get(key);
-              if (existing) {
-                existing.inventory -= cons.consumed_quantity;
-              }
-            }
-          });
-
-          // Map を配列に変換
-          variantInventories = Array.from(combinationMap.entries())
-            .filter(([_, data]) => data.inventory > 0)
-            .map(([key, data]) => ({
-              variant_id: key,
-              variant_name: data.valueName,
-              inventory: data.inventory,
-            }));
-        } else {
-          // 属性が設定されていない場合は、旧システムのバリエーションを使用
-          const partVariants = variants.filter(v => v.base_part_id === part.part_id);
-          variantInventories = partVariants.map(variant => {
-            const variantLogs = logs.filter(log =>
-              log.operation_id === op.operation_id &&
-              log.variant_id === variant.variant_id
-            );
-            const variantGood = variantLogs.reduce((sum, log) => sum + (log.quantity - log.loss_quantity), 0);
-
-            return {
-              variant_id: variant.variant_id,
-              variant_name: variant.display_name,
-              inventory: variantGood,
-            };
-          }).filter(v => v.inventory > 0);
-        }
-
-        return {
-          operation_id: op.operation_id,
-          operation_name: op.operation_name,
-          order_index: op.order_index,
-          inventory,
-          variants: variantInventories.length > 0 ? variantInventories : undefined,
-        };
-      });
-
-      // 在庫が1個以上ある工程のみフィルタ、工程順にソート
-      const inventoryOperations = operationInventories
-        .filter((op) => op.inventory > 0)
-        .sort((a, b) => a.order_index - b.order_index); // 工程順
-
-      // 在庫の有無に関わらず、全ての部品を表示
-      inventoryData.push({
-        part_id: part.part_id,
-        part_name: part.name,
-        operations: inventoryOperations, // 空配列でもOK
-      });
-    });
-
+    const inventoryData = calculator.calculate(parts);
     setInventory(inventoryData);
   };
 
