@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import type { Worker, Part, Operation, ProductVariant, InventoryAdjustment } from '@/lib/types/database';
@@ -74,7 +74,19 @@ export default function InventoryPage() {
   }>({ quantity: 0, loss_quantity: 0, note: '' });
 
   useEffect(() => {
-    fetchData();
+    let isMounted = true;
+
+    const loadData = async () => {
+      if (isMounted) {
+        await fetchData();
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const [bomConsumptions, setBomConsumptions] = useState<any[]>([]);
@@ -159,10 +171,16 @@ export default function InventoryPage() {
   };
 
   useEffect(() => {
-    if (parts.length > 0 && operations.length > 0 && logs.length > 0) {
+    let isMounted = true;
+
+    if (parts.length > 0 && operations.length > 0 && logs.length > 0 && isMounted) {
       calculateInventory();
     }
-  }, [parts, operations, logs, adjustments, processConsumptions, orderConsumptions]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [parts, operations, logs, adjustments, processConsumptions, orderConsumptions, calculateInventory]);
 
   /**
    * Optimized inventory calculation using InventoryCalculator
@@ -173,7 +191,7 @@ export default function InventoryPage() {
    *
    * @see /lib/utils/inventoryCalculator.ts
    */
-  const calculateInventory = () => {
+  const calculateInventory = useCallback(() => {
     const calculator = createInventoryCalculator(
       logs,
       adjustments,
@@ -187,9 +205,9 @@ export default function InventoryPage() {
 
     const inventoryData = calculator.calculate(parts);
     setInventory(inventoryData);
-  };
+  }, [logs, adjustments, bomConsumptions, processConsumptions, orderConsumptions, operations, variants, operationAttributes, parts]);
 
-  const openModal = (partId: string) => {
+  const openModal = useCallback((partId: string) => {
     setSelectedPartId(partId);
     setSelectedOperationId(null);
     setAdjustmentQuantity('');
@@ -197,16 +215,16 @@ export default function InventoryPage() {
     setSelectedAdjustmentAttributeValues({});
     setShowModal(true);
     setMessage(null);
-  };
+  }, []);
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setShowModal(false);
     setSelectedPartId(null);
     setSelectedOperationId(null);
     setAdjustmentQuantity('');
     setAdjustmentNote('');
     setSelectedAdjustmentAttributeValues({});
-  };
+  }, []);
 
   const handleSaveAdjustment = async () => {
     setMessage(null);
@@ -304,16 +322,16 @@ export default function InventoryPage() {
     }
   };
 
-  const getPartOperations = (partId: string) => {
+  const getPartOperations = useCallback((partId: string) => {
     return operations.filter((op) => op.part_id === partId).sort((a, b) => a.order_index - b.order_index);
-  };
+  }, [operations]);
 
-  const getPartName = (partId: string) => {
+  const getPartName = useCallback((partId: string) => {
     return parts.find((p) => p.part_id === partId)?.name || '';
-  };
+  }, [parts]);
 
   // 在庫詳細モーダルを開く
-  const openDetailModal = async (partId: string, partName: string, operationId: string, operationName: string, inventory: number, variants?: VariantInventory[]) => {
+  const openDetailModal = useCallback(async (partId: string, partName: string, operationId: string, operationName: string, inventory: number, variants?: VariantInventory[]) => {
     setSelectedInventoryDetail({
       partId,
       partName,
@@ -337,33 +355,33 @@ export default function InventoryPage() {
     setInventoryAdjustmentLogs(operationAdjustments);
 
     setShowDetailModal(true);
-  };
+  }, [logs, adjustments]);
 
   // 在庫詳細モーダルを閉じる
-  const closeDetailModal = () => {
+  const closeDetailModal = useCallback(() => {
     setShowDetailModal(false);
     setSelectedInventoryDetail(null);
     setInventoryLogs([]);
     setInventoryAdjustmentLogs([]);
     setEditingLogId(null);
     setEditFormData({ quantity: 0, loss_quantity: 0, note: '' });
-  };
+  }, []);
 
   // 作業履歴の編集開始
-  const startEditLog = (log: WorkLog) => {
+  const startEditLog = useCallback((log: WorkLog) => {
     setEditingLogId(log.log_id);
     setEditFormData({
       quantity: log.quantity,
       loss_quantity: log.loss_quantity,
       note: log.note || '',
     });
-  };
+  }, []);
 
   // 作業履歴の編集をキャンセル
-  const cancelEditLog = () => {
+  const cancelEditLog = useCallback(() => {
     setEditingLogId(null);
     setEditFormData({ quantity: 0, loss_quantity: 0, note: '' });
-  };
+  }, []);
 
   // 作業履歴の更新を保存
   const saveEditLog = async (logId: string) => {
