@@ -42,18 +42,31 @@ async function getAuthenticatedUser(request: NextRequest) {
     return null
   }
 
+  // 🔐 管理者権限チェック（CWE-306対策）
+  if (!worker.is_admin) {
+    logger.warn('[getAuthenticatedUser] User is not admin', {
+      workerId: worker.worker_id,
+      userId: user.id
+    })
+    return null
+  }
+
+  logger.info('[getAuthenticatedUser] Admin user authenticated successfully', {
+    workerId: worker.worker_id
+  })
+
   return { user, worker }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // 認証チェック
+    // 認証・認可チェック
     const authResult = await getAuthenticatedUser(request)
 
     if (!authResult) {
       return NextResponse.json(
-        { error: '認証が必要です。ログインしてください。' },
-        { status: 401 }
+        { error: '管理者権限が必要です。ログインしているか、管理者アカウントであることを確認してください。' },
+        { status: 403 } // 401 (Unauthorized) → 403 (Forbidden) に変更
       )
     }
 
