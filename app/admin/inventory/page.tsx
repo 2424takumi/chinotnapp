@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import type { Worker, Part, Operation, ProductVariant, InventoryAdjustment } from '@/lib/types/database';
 import { createInventoryCalculator } from '@/lib/utils/inventoryCalculator';
 import type { PartInventory, VariantInventory, OperationInventory } from '@/lib/utils/inventoryCalculator';
+import CategoryInventoryGroup from './components/CategoryInventoryGroup';
 
 interface WorkLog {
   log_id: string;
@@ -580,7 +581,7 @@ export default function InventoryPage() {
   };
 
   // 完成品（三味線）を作るのに必要な部品の個数を取得
-  const getShamisen組Count = (partId: string, inventory: number) => {
+  const getShamisen組Count = useCallback((partId: string, inventory: number) => {
     // まず完成品（三味線）で直接使われるか確認
     const shamisenPart = parts.find((p) => p.name === '完成品（三味線）');
     if (shamisenPart) {
@@ -624,7 +625,7 @@ export default function InventoryPage() {
     }
 
     return null;
-  };
+  }, [parts, operations, bomData]);
 
   if (loading) {
     return (
