@@ -12,6 +12,7 @@
 
 import { memo } from 'react';
 import type { VariantInventory } from '@/lib/utils/inventoryCalculator';
+import { getVariantBadgeColor } from '@/lib/utils/variantStyles';
 
 interface InventoryCardProps {
   operationId: string;
@@ -25,28 +26,6 @@ interface InventoryCardProps {
     unitCount: number;
   } | null;
   onCardClick: (operationId: string, operationName: string, inventory: number, variants?: VariantInventory[]) => void;
-}
-
-/**
- * Get color class for variant value based on name patterns
- */
-function getVariantColor(valueName: string): string {
-  if (valueName.includes('島村')) {
-    return 'bg-blue-100 text-blue-700';
-  } else if (valueName.includes('通常')) {
-    return 'bg-emerald-100 text-emerald-700';
-  } else if (valueName.includes('赤富士')) {
-    return 'bg-rose-100 text-rose-700';
-  } else if (valueName.includes('花柄')) {
-    return 'bg-purple-100 text-purple-700';
-  } else if (valueName.includes('ウォルナット')) {
-    return 'bg-amber-100 text-amber-700';
-  } else if (valueName.includes('楓')) {
-    return 'bg-yellow-100 text-yellow-700';
-  } else if (valueName.includes('欅')) {
-    return 'bg-orange-100 text-orange-700';
-  }
-  return 'bg-gray-100 text-gray-700';
 }
 
 const InventoryCard = memo<InventoryCardProps>(({
@@ -81,7 +60,7 @@ const InventoryCard = memo<InventoryCardProps>(({
               attributePairs.forEach(pair => {
                 const [attrName, valueName] = pair.split(':').map(s => s.trim());
                 if (valueName) {
-                  const color = getVariantColor(valueName);
+                  const color = getVariantBadgeColor(valueName);
                   tags.push({ text: valueName, color });
                 }
               });
