@@ -23,6 +23,17 @@
 import { useReducer, Dispatch } from 'react';
 import type { Part, Operation, ProductVariant, Worker, InventoryAdjustment } from '@/lib/types/database';
 import type { PartInventory, VariantInventory } from '@/lib/utils/inventoryCalculator';
+import type {
+  WorkLogWithAttributes,
+  InventoryAdjustmentWithAttributes,
+  OperationAttributeData,
+  VariantAttributeData,
+  VariantAttributeValueData,
+  ProcessConsumptionWithAttributes,
+  OrderInventoryConsumption,
+  BOMConsumptionData,
+  BOMData,
+} from '@/lib/types/inventory';
 
 // ========================================
 // State Type Definitions
@@ -33,17 +44,17 @@ export interface InventoryState {
   data: {
     parts: Part[];
     operations: Operation[];
-    logs: any[];
+    logs: WorkLogWithAttributes[];
     variants: ProductVariant[];
     workers: Worker[];
-    adjustments: InventoryAdjustment[];
-    operationAttributes: any[];
-    variantAttributes: any[];
-    variantAttributeValues: any[];
-    processConsumptions: any[];
-    orderConsumptions: any[];
-    bomConsumptions: any[];
-    bomData: any[];
+    adjustments: InventoryAdjustmentWithAttributes[];
+    operationAttributes: OperationAttributeData[];
+    variantAttributes: VariantAttributeData[];
+    variantAttributeValues: VariantAttributeValueData[];
+    processConsumptions: ProcessConsumptionWithAttributes[];
+    orderConsumptions: OrderInventoryConsumption[];
+    bomConsumptions: BOMConsumptionData[];
+    bomData: BOMData[];
     inventory: PartInventory[];
   };
 
@@ -88,8 +99,8 @@ export interface InventoryState {
 
   // Inventory Logs State - Detail modal data
   logs: {
-    inventoryLogs: any[];
-    inventoryAdjustmentLogs: InventoryAdjustment[];
+    inventoryLogs: WorkLogWithAttributes[];
+    inventoryAdjustmentLogs: InventoryAdjustmentWithAttributes[];
   };
 
   // Variant Operations State - Variant-specific quantities and status
@@ -136,7 +147,7 @@ export type InventoryAction =
   | { type: 'UPDATE_EDIT_FORM'; payload: Partial<InventoryState['edit']['editFormData']> }
 
   // Logs Actions
-  | { type: 'SET_INVENTORY_LOGS'; payload: { logs: any[]; adjustments: InventoryAdjustment[] } }
+  | { type: 'SET_INVENTORY_LOGS'; payload: { logs: WorkLogWithAttributes[]; adjustments: InventoryAdjustmentWithAttributes[] } }
 
   // Variant Operations Actions
   | { type: 'SET_VARIANT_ADJUST_QTY'; payload: { key: string; value: string } }

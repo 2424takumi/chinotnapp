@@ -6,24 +6,9 @@ import { supabase } from '@/lib/supabase';
 import type { Worker, Part, Operation, ProductVariant, InventoryAdjustment } from '@/lib/types/database';
 import { createInventoryCalculator } from '@/lib/utils/inventoryCalculator';
 import type { PartInventory, VariantInventory, OperationInventory } from '@/lib/utils/inventoryCalculator';
+import type { WorkLogWithAttributes } from '@/lib/types/inventory';
 import CategoryInventoryGroup from './components/CategoryInventoryGroup';
 import { useInventoryState } from './hooks/useInventoryState';
-
-interface WorkLog {
-  log_id: string;
-  worker_id: string;
-  part_id: string;
-  operation_id: string;
-  duration_minutes: number;
-  quantity: number;
-  loss_quantity: number;
-  note: string | null;
-  is_deleted: boolean;
-  variant_id: string | null;
-  created_at: string;
-  updated_at: string;
-  updated_by: string | null;
-}
 
 export default function InventoryPage() {
   // useReducer による一元的なstate管理
@@ -347,7 +332,7 @@ export default function InventoryPage() {
   }, []);
 
   // 作業履歴の編集開始
-  const startEditLog = useCallback((log: WorkLog) => {
+  const startEditLog = useCallback((log: WorkLogWithAttributes) => {
     dispatch({
       type: 'START_EDIT_LOG',
       payload: {
