@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import type { Worker, Part, Operation, ProductVariant, InventoryAdjustment } from '@/lib/types/database';
 import { createInventoryCalculator } from '@/lib/utils/inventoryCalculator';
 import type { PartInventory, VariantInventory, OperationInventory } from '@/lib/utils/inventoryCalculator';
 import CategoryInventoryGroup from './components/CategoryInventoryGroup';
+import { useInventoryState } from './hooks/useInventoryState';
 
 interface WorkLog {
   log_id: string;
@@ -25,76 +26,38 @@ interface WorkLog {
 }
 
 export default function InventoryPage() {
-  const [parts, setParts] = useState<Part[]>([]);
-  const [operations, setOperations] = useState<Operation[]>([]);
-  const [logs, setLogs] = useState<any[]>([]); // work_log_attributes を含むため any
-  const [variants, setVariants] = useState<ProductVariant[]>([]);
-  const [inventory, setInventory] = useState<PartInventory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [workers, setWorkers] = useState<Worker[]>([]);
-  const [adjustments, setAdjustments] = useState<InventoryAdjustment[]>([]);
-  const [operationAttributes, setOperationAttributes] = useState<any[]>([]);
-  const [variantAttributes, setVariantAttributes] = useState<any[]>([]);
-  const [variantAttributeValues, setVariantAttributeValues] = useState<any[]>([]);
-  const [processConsumptions, setProcessConsumptions] = useState<any[]>([]);
-  const [orderConsumptions, setOrderConsumptions] = useState<any[]>([]);
+  // useReducer による一元的なstate管理
+  const [state, dispatch] = useInventoryState();
 
-  // バリエーション調整用の状態管理
-  const [variantAdjustQty, setVariantAdjustQty] = useState<Record<string, string>>({});
-  const [variantMoveQty, setVariantMoveQty] = useState<Record<string, string>>({});
-  const [adjusting, setAdjusting] = useState<Record<string, boolean>>({});
-  const [moving, setMoving] = useState<Record<string, boolean>>({});
-
-  // モーダル関連のstate
-  const [showModal, setShowModal] = useState(false);
-  const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
-  const [selectedOperationId, setSelectedOperationId] = useState<string | null>(null);
-  const [adjustmentQuantity, setAdjustmentQuantity] = useState<string>('');
-  const [adjustmentNote, setAdjustmentNote] = useState<string>('');
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [selectedAdjustmentAttributeValues, setSelectedAdjustmentAttributeValues] = useState<Record<string, string>>({});
-
-  // 在庫詳細モーダル関連のstate
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedInventoryDetail, setSelectedInventoryDetail] = useState<{
-    partId: string;
-    partName: string;
-    operationId: string;
-    operationName: string;
-    inventory: number;
-    variants?: VariantInventory[];
-  } | null>(null);
-  const [inventoryLogs, setInventoryLogs] = useState<WorkLog[]>([]);
-  const [inventoryAdjustmentLogs, setInventoryAdjustmentLogs] = useState<InventoryAdjustment[]>([]);
-  const [editingLogId, setEditingLogId] = useState<string | null>(null);
-  const [editFormData, setEditFormData] = useState<{
-    quantity: number;
-    loss_quantity: number;
-    note: string;
-  }>({ quantity: 0, loss_quantity: 0, note: '' });
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadData = async () => {
-      if (isMounted) {
-        await fetchData();
-      }
-    };
-
-    loadData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const [bomConsumptions, setBomConsumptions] = useState<any[]>([]);
-  const [bomData, setBomData] = useState<any[]>([]);
+  // state から値を分割代入で取得
+  const {
+    data: {
+      parts,
+      operations,
+      logs,
+      variants,
+      workers,
+      adjustments,
+      operationAttributes,
+      variantAttributes,
+      variantAttributeValues,
+      processConsumptions,
+      orderConsumptions,
+      bomConsumptions,
+      bomData,
+      inventory,
+    },
+    ui: { loading, showModal, showDetailModal, saving },
+    selection: { selectedPartId, selectedOperationId, selectedInventoryDetail },
+    form: { adjustmentQuantity, adjustmentNote, selectedAdjustmentAttributeValues },
+    edit: { editingLogId, editFormData },
+    logs: { inventoryLogs, inventoryAdjustmentLogs },
+    variantOps: { variantAdjustQty, variantMoveQty, adjusting, moving },
+    message,
+  } = state;
 
   const fetchData = async () => {
-    setLoading(true);
+    dispatch({ type: 'SET_LOADING', payload: true });
     try {
       // データ取得にタイムアウト保護を追加（30秒）
       const fetchPromise = Promise.all([
@@ -150,38 +113,32 @@ export default function InventoryPage() {
         timeoutPromise
       ]);
 
-      if (partsRes.data) setParts(partsRes.data);
-      if (operationsRes.data) setOperations(operationsRes.data);
-      if (logsRes.data) setLogs(logsRes.data);
-      if (workersRes.data) setWorkers(workersRes.data);
-      if (consumptionsRes.data) setBomConsumptions(consumptionsRes.data);
-      if (bomRes.data) setBomData(bomRes.data);
-      if (variantsRes.data) setVariants(variantsRes.data);
-      if (adjustmentsRes.data) setAdjustments(adjustmentsRes.data);
-      if (opAttrsRes.data) setOperationAttributes(opAttrsRes.data);
-      if (vAttrsRes.data) setVariantAttributes(vAttrsRes.data);
-      if (vAttrValsRes.data) setVariantAttributeValues(vAttrValsRes.data);
-      if (processConsRes.data) setProcessConsumptions(processConsRes.data);
-      if (orderConsRes.data) setOrderConsumptions(orderConsRes.data);
+      // 全データを一括でdispatch
+      dispatch({
+        type: 'SET_DATA',
+        payload: {
+          parts: partsRes.data || [],
+          operations: operationsRes.data || [],
+          logs: logsRes.data || [],
+          workers: workersRes.data || [],
+          bomConsumptions: consumptionsRes.data || [],
+          bomData: bomRes.data || [],
+          variants: variantsRes.data || [],
+          adjustments: adjustmentsRes.data || [],
+          operationAttributes: opAttrsRes.data || [],
+          variantAttributes: vAttrsRes.data || [],
+          variantAttributeValues: vAttrValsRes.data || [],
+          processConsumptions: processConsRes.data || [],
+          orderConsumptions: orderConsRes.data || [],
+        },
+      });
     } catch (error) {
       console.error('データ取得エラー:', error);
       toast.error('データの取得に失敗しました。ページを再読み込みしてください。');
     } finally {
-      setLoading(false);
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
-
-  useEffect(() => {
-    let isMounted = true;
-
-    if (parts.length > 0 && operations.length > 0 && logs.length > 0 && isMounted) {
-      calculateInventory();
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [parts, operations, logs, adjustments, processConsumptions, orderConsumptions, calculateInventory]);
 
   /**
    * Optimized inventory calculation using InventoryCalculator
@@ -205,39 +162,58 @@ export default function InventoryPage() {
     );
 
     const inventoryData = calculator.calculate(parts);
-    setInventory(inventoryData);
+    dispatch({ type: 'SET_INVENTORY', payload: inventoryData });
   }, [logs, adjustments, bomConsumptions, processConsumptions, orderConsumptions, operations, variants, operationAttributes, parts]);
 
+  // 初回データ取得
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadData = async () => {
+      if (isMounted) {
+        await fetchData();
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // 在庫計算の自動実行
+  useEffect(() => {
+    let isMounted = true;
+
+    if (parts.length > 0 && operations.length > 0 && logs.length > 0 && isMounted) {
+      calculateInventory();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [parts, operations, logs, adjustments, processConsumptions, orderConsumptions, calculateInventory]);
+
   const openModal = useCallback((partId: string) => {
-    setSelectedPartId(partId);
-    setSelectedOperationId(null);
-    setAdjustmentQuantity('');
-    setAdjustmentNote('');
-    setSelectedAdjustmentAttributeValues({});
-    setShowModal(true);
-    setMessage(null);
+    dispatch({ type: 'OPEN_MODAL', payload: partId });
   }, []);
 
   const closeModal = useCallback(() => {
-    setShowModal(false);
-    setSelectedPartId(null);
-    setSelectedOperationId(null);
-    setAdjustmentQuantity('');
-    setAdjustmentNote('');
-    setSelectedAdjustmentAttributeValues({});
+    dispatch({ type: 'CLOSE_MODAL' });
   }, []);
 
   const handleSaveAdjustment = async () => {
-    setMessage(null);
+    dispatch({ type: 'CLEAR_MESSAGE' });
 
     if (!selectedPartId || !selectedOperationId) {
-      setMessage({ type: 'error', text: '工程を選択してください' });
+      dispatch({ type: 'SET_MESSAGE', payload: { type: 'error', text: '工程を選択してください' } });
       return;
     }
 
     const qty = parseInt(adjustmentQuantity);
     if (!qty || qty <= 0) {
-      setMessage({ type: 'error', text: '数量は1以上で入力してください' });
+      dispatch({ type: 'SET_MESSAGE', payload: { type: 'error', text: '数量は1以上で入力してください' } });
       return;
     }
 
@@ -254,7 +230,7 @@ export default function InventoryPage() {
         const attrNames = missingAttributes
           .map(oa => variantAttributes.find(va => va.attribute_id === oa.attribute_id)?.name || '不明')
           .join(', ');
-        setMessage({ type: 'error', text: `以下の属性を選択してください: ${attrNames}` });
+        dispatch({ type: 'SET_MESSAGE', payload: { type: 'error', text: `以下の属性を選択してください: ${attrNames}` } });
         return;
       }
     }
@@ -262,11 +238,11 @@ export default function InventoryPage() {
     // システム作業者を取得
     const systemWorker = workers.find((w) => w.name === 'システム');
     if (!systemWorker) {
-      setMessage({ type: 'error', text: 'システム作業者が見つかりません。データベースにシステム作業者を追加してください。' });
+      dispatch({ type: 'SET_MESSAGE', payload: { type: 'error', text: 'システム作業者が見つかりません。データベースにシステム作業者を追加してください。' } });
       return;
     }
 
-    setSaving(true);
+    dispatch({ type: 'SET_SAVING', payload: true });
     try {
       const noteText = adjustmentNote ? adjustmentNote : '';
 
@@ -306,7 +282,7 @@ export default function InventoryPage() {
         }
       }
 
-      setMessage({ type: 'success', text: '在庫調整を保存しました' });
+      dispatch({ type: 'SET_MESSAGE', payload: { type: 'success', text: '在庫調整を保存しました' } });
 
       // データを再取得
       await fetchData();
@@ -317,9 +293,9 @@ export default function InventoryPage() {
       }, 2000);
     } catch (error) {
       console.error('保存エラー:', error);
-      setMessage({ type: 'error', text: '保存に失敗しました' });
+      dispatch({ type: 'SET_MESSAGE', payload: { type: 'error', text: '保存に失敗しました' } });
     } finally {
-      setSaving(false);
+      dispatch({ type: 'SET_SAVING', payload: false });
     }
   };
 
@@ -333,13 +309,16 @@ export default function InventoryPage() {
 
   // 在庫詳細モーダルを開く
   const openDetailModal = useCallback(async (partId: string, partName: string, operationId: string, operationName: string, inventory: number, variants?: VariantInventory[]) => {
-    setSelectedInventoryDetail({
-      partId,
-      partName,
-      operationId,
-      operationName,
-      inventory,
-      variants,
+    dispatch({
+      type: 'OPEN_DETAIL_MODAL',
+      payload: {
+        partId,
+        partName,
+        operationId,
+        operationName,
+        inventory,
+        variants,
+      },
     });
 
     // その工程の作業履歴を取得
@@ -347,41 +326,42 @@ export default function InventoryPage() {
       log.operation_id === operationId &&
       log.is_deleted === false
     );
-    setInventoryLogs(operationLogs);
 
     // その工程の在庫調整履歴を取得
     const operationAdjustments = adjustments.filter(adj =>
       adj.operation_id === operationId
     );
-    setInventoryAdjustmentLogs(operationAdjustments);
 
-    setShowDetailModal(true);
+    dispatch({
+      type: 'SET_INVENTORY_LOGS',
+      payload: {
+        logs: operationLogs,
+        adjustments: operationAdjustments,
+      },
+    });
   }, [logs, adjustments]);
 
   // 在庫詳細モーダルを閉じる
   const closeDetailModal = useCallback(() => {
-    setShowDetailModal(false);
-    setSelectedInventoryDetail(null);
-    setInventoryLogs([]);
-    setInventoryAdjustmentLogs([]);
-    setEditingLogId(null);
-    setEditFormData({ quantity: 0, loss_quantity: 0, note: '' });
+    dispatch({ type: 'CLOSE_DETAIL_MODAL' });
   }, []);
 
   // 作業履歴の編集開始
   const startEditLog = useCallback((log: WorkLog) => {
-    setEditingLogId(log.log_id);
-    setEditFormData({
-      quantity: log.quantity,
-      loss_quantity: log.loss_quantity,
-      note: log.note || '',
+    dispatch({
+      type: 'START_EDIT_LOG',
+      payload: {
+        logId: log.log_id,
+        quantity: log.quantity,
+        loss_quantity: log.loss_quantity,
+        note: log.note || '',
+      },
     });
   }, []);
 
   // 作業履歴の編集をキャンセル
   const cancelEditLog = useCallback(() => {
-    setEditingLogId(null);
-    setEditFormData({ quantity: 0, loss_quantity: 0, note: '' });
+    dispatch({ type: 'CANCEL_EDIT_LOG' });
   }, []);
 
   // 作業履歴の更新を保存
