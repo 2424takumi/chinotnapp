@@ -97,7 +97,7 @@ export default function OrdersPage() {
       .eq('active', true);
     if (data) {
       const priceMap: Record<string, number> = {};
-      data.forEach((p: any) => {
+      data.forEach((p: ProductVariantV2 & { price: number }) => {
         priceMap[p.variant_id] = p.price;
       });
       setPrices(priceMap);
@@ -157,7 +157,7 @@ export default function OrdersPage() {
     setFormData({ ...formData, items: newItems });
   };
 
-  const handleItemChange = (index: number, field: string, value: any) => {
+  const handleItemChange = (index: number, field: keyof OrderFormData['items'][0], value: string | number) => {
     const newItems = [...formData.items];
     newItems[index] = { ...newItems[index], [field]: value };
 
@@ -184,7 +184,7 @@ export default function OrdersPage() {
 
       if (editingOrder) {
         // 更新
-        const updateData: any = {
+        const updateData: Database['public']['Tables']['orders']['Update'] = {
           customer_id: formData.customer_id || null,
           customer_name: formData.customer_name,
           order_number: formData.order_number,
@@ -228,7 +228,7 @@ export default function OrdersPage() {
         if (itemsError) throw itemsError;
       } else {
         // 新規作成
-        const insertData: any = {
+        const insertData: Database['public']['Tables']['orders']['Insert'] = {
           customer_id: formData.customer_id || null,
           customer_name: formData.customer_name,
           order_number: formData.order_number,
@@ -270,7 +270,7 @@ export default function OrdersPage() {
       await fetchOrders();
       setShowModal(false);
       toast.success(editingOrder ? '受注を更新しました' : '受注を登録しました');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('保存エラー:', error);
       toast.error(`エラー: ${error.message}`);
     } finally {
@@ -307,7 +307,7 @@ export default function OrdersPage() {
         }
       }
 
-      const updateData: any = { status: newStatus };
+      const updateData: Database['public']['Tables']['orders']['Update'] = { status: newStatus };
 
       // 納品完了の場合は納品日を設定
       if (newStatus === 'completed') {
@@ -322,7 +322,7 @@ export default function OrdersPage() {
       if (error) throw error;
       await fetchOrders();
       toast.success('ステータスを更新しました');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('ステータス更新エラー:', error);
       toast.error(`エラー: ${error.message}`);
     }

@@ -31,6 +31,36 @@ interface WorkLogDetail {
   updated_by: string | null;
 }
 
+interface WorkLogQueryResult {
+  log_id: string;
+  worker_id: string;
+  part_id: string;
+  operation_id: string;
+  duration_minutes: number;
+  quantity: number;
+  loss_quantity: number;
+  note: string | null;
+  work_date: string;
+  session_id: string | null;
+  created_at: string;
+  updated_at: string;
+  updated_by: string | null;
+  workers?: { name: string } | null;
+  parts?: { name: string } | null;
+  operations?: { name: string } | null;
+}
+
+interface AttributeQueryResult {
+  work_log_id: string;
+  value_id: string;
+  variant_attribute_values?: {
+    name: string;
+    variant_attributes?: {
+      name: string;
+    } | null;
+  } | null;
+}
+
 export default function AdminLogsPage() {
   const [logs, setLogs] = useState<WorkLogDetail[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
@@ -86,10 +116,10 @@ export default function AdminLogsPage() {
 
       if (error) throw error;
 
-      const logsData = data || [];
+      const logsData = (data || []) as WorkLogQueryResult[];
 
       // 一括で全ログの属性値を取得（N+1クエリ対策）
-      const logIds = logsData.map((log: any) => log.log_id);
+      const logIds = logsData.map((log) => log.log_id);
       let attributeMap: Record<string, AttributeValueInfo[]> = {};
 
       if (logIds.length > 0) {
@@ -107,7 +137,7 @@ export default function AdminLogsPage() {
 
         // ログIDごとに属性値をグループ化
         if (allAttrData) {
-          for (const attr of allAttrData as any[]) {
+          for (const attr of allAttrData as AttributeQueryResult[]) {
             const logId = attr.work_log_id;
             if (!attributeMap[logId]) {
               attributeMap[logId] = [];
@@ -121,7 +151,7 @@ export default function AdminLogsPage() {
       }
 
       // ログデータを整形
-      const logsWithAttributes = logsData.map((log: any) => ({
+      const logsWithAttributes = logsData.map((log) => ({
         log_id: log.log_id,
         worker_id: log.worker_id,
         worker_name: log.workers?.name || '不明',

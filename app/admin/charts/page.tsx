@@ -34,6 +34,26 @@ interface WorkLog {
   created_at: string;
 }
 
+interface WorkLogQueryResult {
+  worker_id: string;
+  part_id: string;
+  operation_id: string;
+  duration_minutes: number;
+  quantity: number;
+  loss_quantity: number;
+  work_date: string;
+  created_at: string;
+  workers?: { name: string } | null;
+  parts?: { name: string; order_index: number } | null;
+  operations?: { name: string; order_index: number } | null;
+}
+
+interface ChartDataRow {
+  operation: string;
+  partName: string;
+  [workerName: string]: string | number;
+}
+
 // デフォルト日付を計算するユーティリティ
 function getDefaultDateRange() {
   const today = new Date();
@@ -103,7 +123,7 @@ export default function ChartsPage() {
       const { data } = await query;
 
       if (data) {
-        const formattedLogs: WorkLog[] = data.map((log: any) => ({
+        const formattedLogs: WorkLog[] = (data as WorkLogQueryResult[]).map((log) => ({
           worker_id: log.worker_id,
           worker_name: log.workers?.name || '不明',
           part_id: log.part_id,
@@ -165,7 +185,7 @@ export default function ChartsPage() {
 
     const allWorkers = Array.from(new Set(latestLogs.map((l) => l.worker_name)));
     const chartData = Array.from(operationWorkerMap.entries()).map(([operation, data]) => {
-      const row: any = { operation, partName: data.partName };
+      const row: ChartDataRow = { operation, partName: data.partName };
       allWorkers.forEach((worker) => {
         row[worker] = data.workerMap.get(worker) || 0;
       });
@@ -226,10 +246,10 @@ export default function ChartsPage() {
       return infoA.opOrder - infoB.opOrder;
     });
 
-    const tableData: any[] = [];
+    const tableData: ChartDataRow[] = [];
     allOperations.forEach((op) => {
       const info = operationInfoMap.get(op)!;
-      const row: any = { operation: op, partName: info.partName };
+      const row: ChartDataRow = { operation: op, partName: info.partName };
       allWorkers.forEach((worker) => {
         const key = `${worker}|${op}`;
         const stats = matrix.get(key)?.get('total');

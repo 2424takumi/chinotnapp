@@ -7,6 +7,31 @@ import type {
   VariantAttributeValue,
 } from '@/lib/types/database';
 
+// Extended types for query results with joins
+interface VariantAttributeValueWithAttribute extends VariantAttributeValue {
+  variant_attributes?: { name: string } | null;
+}
+
+interface VariantAttributeAssignment {
+  value_id: string;
+  variant_attribute_values?: {
+    name: string;
+    variant_attributes?: { name: string } | null;
+  } | null;
+}
+
+interface ProductVariantV2Extended {
+  variant_id: string;
+  base_part_id: string;
+  variant_code: string;
+  display_name: string;
+  description: string | null;
+  order_index: number;
+  active: boolean;
+  parts?: { name: string } | null;
+  attributes: VariantAttributeAssignment[];
+}
+
 // バリエーション属性タブ
 export function VariantAttributesTab() {
   const [attributes, setAttributes] = useState<VariantAttribute[]>([]);
@@ -228,7 +253,7 @@ export function VariantAttributesTab() {
 
 // 属性値タブ
 export function VariantAttributeValuesTab() {
-  const [values, setValues] = useState<VariantAttributeValue[]>([]);
+  const [values, setValues] = useState<VariantAttributeValueWithAttribute[]>([]);
   const [attributes, setAttributes] = useState<VariantAttribute[]>([]);
   const [editing, setEditing] = useState<VariantAttributeValue | null>(null);
   const [attributeId, setAttributeId] = useState('');
@@ -252,7 +277,7 @@ export function VariantAttributeValuesTab() {
       .from('variant_attribute_values')
       .select('*, variant_attributes(name)')
       .order('order_index');
-    if (data) setValues(data as any);
+    if (data) setValues(data as VariantAttributeValueWithAttribute[]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -455,7 +480,7 @@ export function VariantAttributeValuesTab() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {values.map((value: any) => (
+            {values.map((value) => (
               <tr key={value.value_id}>
                 <td className="px-4 py-3 font-medium">{value.variant_attributes?.name || getAttributeName(value.attribute_id)}</td>
                 <td className="px-4 py-3">{value.name}</td>
@@ -485,11 +510,11 @@ export function VariantAttributeValuesTab() {
 
 // 商品バリエーションV2タブ
 export function ProductVariantsV2Tab() {
-  const [variants, setVariants] = useState<any[]>([]);
+  const [variants, setVariants] = useState<ProductVariantV2Extended[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
   const [attributes, setAttributes] = useState<VariantAttribute[]>([]);
   const [attributeValues, setAttributeValues] = useState<VariantAttributeValue[]>([]);
-  const [editing, setEditing] = useState<any | null>(null);
+  const [editing, setEditing] = useState<ProductVariantV2Extended | null>(null);
   const [basePartId, setBasePartId] = useState('');
   const [variantCode, setVariantCode] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -626,7 +651,7 @@ export function ProductVariantsV2Tab() {
     }
   };
 
-  const handleEdit = (variant: any) => {
+  const handleEdit = (variant: ProductVariantV2Extended) => {
     setEditing(variant);
     setBasePartId(variant.base_part_id);
     setVariantCode(variant.variant_code);
@@ -636,7 +661,7 @@ export function ProductVariantsV2Tab() {
     setActive(variant.active);
 
     // 既存の属性値IDを設定
-    const valueIds = variant.attributes.map((a: any) => a.value_id);
+    const valueIds = variant.attributes.map((a) => a.value_id);
     setSelectedValueIds(valueIds);
   };
 
@@ -851,14 +876,14 @@ export function ProductVariantsV2Tab() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {variants.map((variant: any) => (
+            {variants.map((variant) => (
               <tr key={variant.variant_id}>
                 <td className="px-4 py-3">{variant.variant_code}</td>
                 <td className="px-4 py-3">{variant.display_name}</td>
                 <td className="px-4 py-3">{variant.parts?.name || getPartName(variant.base_part_id)}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
-                    {variant.attributes.map((assignment: any) => (
+                    {variant.attributes.map((assignment) => (
                       <span
                         key={assignment.value_id}
                         className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"

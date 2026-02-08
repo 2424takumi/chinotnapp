@@ -7,9 +7,16 @@ import type {
   Worker,
   Part,
   Operation,
-  Database
+  Database,
+  Customer,
+  ProductPrice
 } from '@/lib/types/database';
 import { VariantAttributesTab, VariantAttributeValuesTab, ProductVariantsV2Tab } from './variant-tabs';
+
+// Extended types with relations
+interface OperationWithPart extends Operation {
+  parts?: Part;
+}
 
 export default function MastersPage() {
   const [activeTab, setActiveTab] = useState<'workers' | 'customers' | 'parts' | 'operations' | 'variant_attributes' | 'variant_attribute_values' | 'product_variants_v2' | 'prices'>('workers');
@@ -248,7 +255,7 @@ function WorkersTab() {
       setEmail('');
       setPassword('');
       fetchWorkers();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('アカウント設定エラー:', error);
       toast.error(`アカウント設定に失敗しました: ${error.message}`);
     }
@@ -1080,7 +1087,7 @@ function OperationsTab() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {filteredOperations.map((operation: any) => {
+            {filteredOperations.map((operation: OperationWithPart) => {
               const partName = operation.parts?.name || getPartName(operation.part_id);
               // 部品ごとの色を定義
               const partColors: Record<string, string> = {
@@ -1191,13 +1198,13 @@ function PricesTab() {
       fetchPrices();
       handleCancel();
       toast.success('保存しました');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('保存エラー:', error);
       toast.error(`エラー: ${error.message}`);
     }
   };
 
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: Part) => {
     setEditing(item);
     setVariantId(item.variant_id);
     setPrice(item.price.toString());
@@ -1226,7 +1233,7 @@ function PricesTab() {
       fetchPrices();
       handleCancel();
       toast.success('削除しました');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('削除エラー:', error);
       toast.error(`エラー: ${error.message}`);
     }
@@ -1343,7 +1350,7 @@ function PricesTab() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {prices.map((item: any) => {
+            {prices.map((item: ProductPrice) => {
               const grossProfit = item.cost ? item.price - item.cost : null;
               const grossProfitRate = grossProfit && item.price > 0 ? (grossProfit / item.price) * 100 : null;
 
@@ -1488,13 +1495,13 @@ function CustomersTab() {
       handleCancel();
       fetchCustomers();
       toast.success('保存しました');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('保存エラー:', error);
       toast.error(`エラー: ${error.message}`);
     }
   };
 
-  const handleEdit = (customer: any) => {
+  const handleEdit = (customer: Customer) => {
     setEditing(customer);
     setCustomerCode(customer.customer_code);
     setCustomerName(customer.customer_name);
@@ -1540,7 +1547,7 @@ function CustomersTab() {
       toast.success('削除しました');
       handleCancel();
       fetchCustomers();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('削除エラー:', error);
       toast.error(`エラー: ${error.message}`);
     }
