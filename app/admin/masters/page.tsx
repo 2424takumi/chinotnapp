@@ -9,9 +9,13 @@ import type {
   Operation,
   Database,
   Customer,
-  ProductPrice
+  ProductPrice,
 } from '@/lib/types/database';
-import { VariantAttributesTab, VariantAttributeValuesTab, ProductVariantsV2Tab } from './variant-tabs';
+import {
+  VariantAttributesTab,
+  VariantAttributeValuesTab,
+  ProductVariantsV2Tab,
+} from './variant-tabs';
 
 // Extended types with relations
 interface OperationWithPart extends Operation {
@@ -19,7 +23,16 @@ interface OperationWithPart extends Operation {
 }
 
 export default function MastersPage() {
-  const [activeTab, setActiveTab] = useState<'workers' | 'customers' | 'parts' | 'operations' | 'variant_attributes' | 'variant_attribute_values' | 'product_variants_v2' | 'prices'>('workers');
+  const [activeTab, setActiveTab] = useState<
+    | 'workers'
+    | 'customers'
+    | 'parts'
+    | 'operations'
+    | 'variant_attributes'
+    | 'variant_attribute_values'
+    | 'product_variants_v2'
+    | 'prices'
+  >('workers');
 
   return (
     <div className="space-y-6">
@@ -156,18 +169,16 @@ function WorkersTab() {
           .update({
             name,
             order_index: parseInt(orderIndex),
-            active
+            active,
           })
           .eq('worker_id', editing.worker_id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('workers')
-          .insert({
-            name,
-            order_index: parseInt(orderIndex),
-            active
-          });
+        const { error } = await supabase.from('workers').insert({
+          name,
+          order_index: parseInt(orderIndex),
+          active,
+        });
         if (error) throw error;
       }
 
@@ -201,10 +212,7 @@ function WorkersTab() {
     if (!confirm(`作業者「${editing.name}」を削除しますか？`)) return;
 
     try {
-      const { error } = await supabase
-        .from('workers')
-        .delete()
-        .eq('worker_id', editing.worker_id);
+      const { error } = await supabase.from('workers').delete().eq('worker_id', editing.worker_id);
 
       if (error) throw error;
 
@@ -272,9 +280,7 @@ function WorkersTab() {
     <div className="space-y-6">
       {/* フォーム */}
       <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="font-medium mb-4 text-balance">
-          {editing ? '編集' : '新規作業者'}
-        </h3>
+        <h3 className="font-medium mb-4 text-balance">{editing ? '編集' : '新規作業者'}</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -356,9 +362,7 @@ function WorkersTab() {
               <tr key={worker.worker_id}>
                 <td className="px-4 py-3">{worker.name}</td>
                 <td className="px-4 py-3">{worker.order_index}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  {worker.email || '-'}
-                </td>
+                <td className="px-4 py-3 text-sm text-gray-600">{worker.email || '-'}</td>
                 <td className="px-4 py-3">
                   <span
                     className={`px-2 py-1 rounded text-xs ${
@@ -410,9 +414,7 @@ function WorkersTab() {
             </h3>
             <form onSubmit={handleAuthSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  メールアドレス
-                </label>
+                <label className="block text-sm font-medium mb-1">メールアドレス</label>
                 <input
                   type="email"
                   value={email}
@@ -423,9 +425,7 @@ function WorkersTab() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  初期パスワード
-                </label>
+                <label className="block text-sm font-medium mb-1">初期パスワード</label>
                 <input
                   type="password"
                   value={password}
@@ -485,18 +485,16 @@ function PartsTab() {
           .update({
             name,
             order_index: parseInt(orderIndex),
-            active
+            active,
           })
           .eq('part_id', editing.part_id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('parts')
-          .insert({
-            name,
-            order_index: parseInt(orderIndex),
-            active
-          });
+        const { error } = await supabase.from('parts').insert({
+          name,
+          order_index: parseInt(orderIndex),
+          active,
+        });
         if (error) throw error;
       }
 
@@ -530,10 +528,7 @@ function PartsTab() {
     if (!confirm(`部品「${editing.name}」を削除しますか？`)) return;
 
     try {
-      const { error } = await supabase
-        .from('parts')
-        .delete()
-        .eq('part_id', editing.part_id);
+      const { error } = await supabase.from('parts').delete().eq('part_id', editing.part_id);
 
       if (error) throw error;
 
@@ -550,9 +545,7 @@ function PartsTab() {
     <div className="space-y-6">
       {/* フォーム */}
       <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="font-medium mb-4 text-balance">
-          {editing ? '編集' : '新規部品'}
-        </h3>
+        <h3 className="font-medium mb-4 text-balance">{editing ? '編集' : '新規部品'}</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -686,12 +679,19 @@ function OperationsTab() {
   };
 
   const fetchOperations = async () => {
-    const { data } = await supabase.from('operations').select('*, parts(name)').order('order_index');
+    const { data } = await supabase
+      .from('operations')
+      .select('*, parts(name)')
+      .order('order_index');
     if (data) setOperations(data as any);
   };
 
   const fetchAttributes = async () => {
-    const { data } = await supabase.from('variant_attributes').select('*').eq('active', true).order('order_index');
+    const { data } = await supabase
+      .from('variant_attributes')
+      .select('*')
+      .eq('active', true)
+      .order('order_index');
     if (data) setAttributes(data);
   };
 
@@ -754,7 +754,7 @@ function OperationsTab() {
 
         // 新しい紐付けを追加
         if (selectedAttributeIds.length > 0) {
-          const inserts = selectedAttributeIds.map(attributeId => ({
+          const inserts = selectedAttributeIds.map((attributeId) => ({
             operation_id: operationId,
             attribute_id: attributeId,
           }));
@@ -800,7 +800,7 @@ function OperationsTab() {
       .eq('operation_id', operation.operation_id);
 
     if (operationAttrs) {
-      setSelectedAttributeIds(operationAttrs.map(a => a.attribute_id));
+      setSelectedAttributeIds(operationAttrs.map((a) => a.attribute_id));
     } else {
       setSelectedAttributeIds([]);
     }
@@ -845,9 +845,10 @@ function OperationsTab() {
   };
 
   // フィルタリングされた工程リスト
-  const filteredOperations = selectedPartFilter === 'all'
-    ? operations
-    : operations.filter((op) => op.part_id === selectedPartFilter);
+  const filteredOperations =
+    selectedPartFilter === 'all'
+      ? operations
+      : operations.filter((op) => op.part_id === selectedPartFilter);
 
   // 部品ごとの工程数を計算
   const getOperationCountByPart = (partId: string) => {
@@ -858,9 +859,7 @@ function OperationsTab() {
     <div className="space-y-6">
       {/* フォーム */}
       <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="font-medium mb-4 text-balance">
-          {editing ? '編集' : '新規工程'}
-        </h3>
+        <h3 className="font-medium mb-4 text-balance">{editing ? '編集' : '新規工程'}</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
@@ -928,7 +927,9 @@ function OperationsTab() {
 
           {/* 前工程在庫消費設定 */}
           <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-            <h4 className="text-sm font-semibold text-gray-800 mb-3 text-balance">前工程在庫消費設定</h4>
+            <h4 className="text-sm font-semibold text-gray-800 mb-3 text-balance">
+              前工程在庫消費設定
+            </h4>
             <div className="space-y-3">
               <label className="flex items-start">
                 <input
@@ -940,7 +941,8 @@ function OperationsTab() {
                 <div>
                   <span className="text-sm font-medium">前工程在庫を消費する</span>
                   <p className="text-xs text-gray-600 mt-1 text-pretty">
-                    この工程で作業を記録すると、前工程の在庫が自動的に減ります<br />
+                    この工程で作業を記録すると、前工程の在庫が自動的に減ります
+                    <br />
                     例: 「皮はり」で5個作成 → 「帯鋸整形」の在庫が5個減る
                   </p>
                 </div>
@@ -949,9 +951,7 @@ function OperationsTab() {
               {consumesPreviousOperation && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium mb-1">
-                      1個あたりの消費数量
-                    </label>
+                    <label className="block text-sm font-medium mb-1">1個あたりの消費数量</label>
                     <input
                       type="number"
                       min="1"
@@ -974,7 +974,8 @@ function OperationsTab() {
                     <div>
                       <span className="text-sm font-medium">属性値を引き継ぐ</span>
                       <p className="text-xs text-gray-600 mt-1 text-pretty">
-                        ONの場合、同じ属性値の在庫のみ消費します<br />
+                        ONの場合、同じ属性値の在庫のみ消費します
+                        <br />
                         例: 「通常版」で作業 → 「通常版」の在庫のみ減る
                       </p>
                     </div>
@@ -1000,7 +1001,9 @@ function OperationsTab() {
                         if (e.target.checked) {
                           setSelectedAttributeIds([...selectedAttributeIds, attr.attribute_id]);
                         } else {
-                          setSelectedAttributeIds(selectedAttributeIds.filter(id => id !== attr.attribute_id));
+                          setSelectedAttributeIds(
+                            selectedAttributeIds.filter((id) => id !== attr.attribute_id)
+                          );
                         }
                       }}
                       className="mr-2"
@@ -1010,7 +1013,8 @@ function OperationsTab() {
                 ))}
               </div>
               <p className="text-xs text-gray-500 mt-1 text-pretty">
-                例: 「皮はり」工程では「皮デザイン」属性を選択すると、作業記録時に皮デザインを選択できます
+                例:
+                「皮はり」工程では「皮デザイン」属性を選択すると、作業記録時に皮デザインを選択できます
               </p>
             </div>
           )}
@@ -1091,9 +1095,9 @@ function OperationsTab() {
               const partName = operation.parts?.name || getPartName(operation.part_id);
               // 部品ごとの色を定義
               const partColors: Record<string, string> = {
-                '棹': 'bg-blue-100 text-blue-800',
-                '胴': 'bg-green-100 text-green-800',
-                '糸巻き': 'bg-purple-100 text-purple-800',
+                棹: 'bg-blue-100 text-blue-800',
+                胴: 'bg-green-100 text-green-800',
+                糸巻き: 'bg-purple-100 text-purple-800',
               };
               const partColorClass = partColors[partName] || 'bg-gray-100 text-gray-800';
 
@@ -1113,7 +1117,9 @@ function OperationsTab() {
                   <td className="px-4 py-3">
                     <span
                       className={`px-2 py-1 rounded text-xs ${
-                        operation.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        operation.active
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
                       }`}
                     >
                       {operation.active ? '有効' : '無効'}
@@ -1185,14 +1191,12 @@ function PricesTab() {
           .eq('price_id', editing.price_id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('product_prices')
-          .insert({
-            variant_id: variantId,
-            price: parseFloat(price),
-            cost: cost ? parseFloat(cost) : null,
-            active,
-          });
+        const { error } = await supabase.from('product_prices').insert({
+          variant_id: variantId,
+          price: parseFloat(price),
+          cost: cost ? parseFloat(cost) : null,
+          active,
+        });
         if (error) throw error;
       }
       fetchPrices();
@@ -1243,7 +1247,9 @@ function PricesTab() {
     <div className="space-y-6">
       {/* フォーム */}
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow space-y-4">
-        <h3 className="text-lg font-semibold text-balance">{editing ? '価格設定を編集' : '新規価格設定'}</h3>
+        <h3 className="text-lg font-semibold text-balance">
+          {editing ? '価格設定を編集' : '新規価格設定'}
+        </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -1281,9 +1287,7 @@ function PricesTab() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              原価（円）
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">原価（円）</label>
             <input
               type="number"
               value={cost}
@@ -1341,24 +1345,39 @@ function PricesTab() {
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">商品名</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">販売価格</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">原価</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">粗利</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ステータス</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">操作</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                商品名
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                販売価格
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                原価
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                粗利
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                ステータス
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                操作
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {prices.map((item: ProductPrice) => {
               const grossProfit = item.cost ? item.price - item.cost : null;
-              const grossProfitRate = grossProfit && item.price > 0 ? (grossProfit / item.price) * 100 : null;
+              const grossProfitRate =
+                grossProfit && item.price > 0 ? (grossProfit / item.price) * 100 : null;
 
               return (
                 <tr key={item.price_id}>
                   <td className="px-4 py-3">{item.product_variants_v2?.display_name || '—'}</td>
                   <td className="px-4 py-3">¥{item.price.toLocaleString()}</td>
-                  <td className="px-4 py-3">{item.cost ? `¥${item.cost.toLocaleString()}` : '—'}</td>
+                  <td className="px-4 py-3">
+                    {item.cost ? `¥${item.cost.toLocaleString()}` : '—'}
+                  </td>
                   <td className="px-4 py-3">
                     {grossProfit !== null ? (
                       <span>
@@ -1473,22 +1492,20 @@ function CustomersTab() {
           .eq('customer_id', editing.customer_id);
         if (error) throw error;
       } else {
-        const { error} = await supabase
-          .from('customers')
-          .insert({
-            customer_code: code,
-            customer_name: customerName,
-            customer_name_kana: customerNameKana || null,
-            company_name: companyName || null,
-            postal_code: postalCode || null,
-            address: address || null,
-            phone: phone || null,
-            email: email || null,
-            contact_person: contactPerson || null,
-            note: note || null,
-            order_index: parseInt(orderIndex),
-            active,
-          });
+        const { error } = await supabase.from('customers').insert({
+          customer_code: code,
+          customer_name: customerName,
+          customer_name_kana: customerNameKana || null,
+          company_name: companyName || null,
+          postal_code: postalCode || null,
+          address: address || null,
+          phone: phone || null,
+          email: email || null,
+          contact_person: contactPerson || null,
+          note: note || null,
+          order_index: parseInt(orderIndex),
+          active,
+        });
         if (error) throw error;
       }
 
@@ -1557,7 +1574,9 @@ function CustomersTab() {
     <div className="space-y-6">
       {/* フォーム */}
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow space-y-4">
-        <h3 className="text-lg font-semibold text-balance">{editing ? '顧客を編集' : '新規顧客'}</h3>
+        <h3 className="text-lg font-semibold text-balance">
+          {editing ? '顧客を編集' : '新規顧客'}
+        </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -1724,13 +1743,27 @@ function CustomersTab() {
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">顧客コード</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">顧客名</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">法人名</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">電話番号</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">表示順</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ステータス</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">操作</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                顧客コード
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                顧客名
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                法人名
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                電話番号
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                表示順
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                ステータス
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                操作
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y">

@@ -107,12 +107,14 @@ export default function ChartsPage() {
     try {
       let query = supabase
         .from('work_logs')
-        .select(`
+        .select(
+          `
           *,
           workers(name),
           parts(name, order_index),
           operations(name, order_index)
-        `)
+        `
+        )
         .eq('is_deleted', false)
         .gte('work_date', dateFrom)
         .lte('work_date', dateTo);
@@ -160,11 +162,21 @@ export default function ChartsPage() {
     const latestLogs = logs.filter((log) => log.work_date === latestDate);
 
     if (latestLogs.length === 0) {
-      return { chartData: [], totalTime: 0, totalQty: 0, totalGood: 0, date: latestDate, workers: [] };
+      return {
+        chartData: [],
+        totalTime: 0,
+        totalQty: 0,
+        totalGood: 0,
+        date: latestDate,
+        workers: [],
+      };
     }
 
     // 工程別×作業者別の集計（部品情報も保持）
-    const operationWorkerMap = new Map<string, { workerMap: Map<string, number>; partName: string }>();
+    const operationWorkerMap = new Map<
+      string,
+      { workerMap: Map<string, number>; partName: string }
+    >();
     let totalTime = 0;
     let totalQty = 0;
     let totalLoss = 0;
@@ -205,7 +217,10 @@ export default function ChartsPage() {
   // グラフ2: 人別×工程別の生産性（分/良品）
   const getProductivityMatrix = () => {
     const matrix = new Map<string, Map<string, { minutes: number; good: number }>>();
-    const operationInfoMap = new Map<string, { partName: string; partOrder: number; opOrder: number }>(); // 工程→部品情報のマッピング
+    const operationInfoMap = new Map<
+      string,
+      { partName: string; partOrder: number; opOrder: number }
+    >(); // 工程→部品情報のマッピング
 
     logs.forEach((log) => {
       const key = `${log.worker_name}|${log.operation_name}`;
@@ -267,7 +282,10 @@ export default function ChartsPage() {
 
   // グラフ4: 工程別のロス率
   const getLossRateByOperation = () => {
-    const operationStats = new Map<string, { quantity: number; loss: number; partName: string; partOrder: number; opOrder: number }>();
+    const operationStats = new Map<
+      string,
+      { quantity: number; loss: number; partName: string; partOrder: number; opOrder: number }
+    >();
 
     logs.forEach((log) => {
       if (!operationStats.has(log.operation_name)) {
@@ -308,7 +326,16 @@ export default function ChartsPage() {
   const productivityMatrix = getProductivityMatrix();
   const lossRate = getLossRateByOperation();
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+  const COLORS = [
+    '#3b82f6',
+    '#10b981',
+    '#f59e0b',
+    '#ef4444',
+    '#8b5cf6',
+    '#ec4899',
+    '#14b8a6',
+    '#f97316',
+  ];
 
   const formatTime = (minutes: number) => {
     const hours = Math.floor(minutes / 60);
@@ -334,14 +361,24 @@ export default function ChartsPage() {
       ) : logs.length === 0 ? (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
           <div className="mb-4">
-            <svg className="mx-auto size-12 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <svg
+              className="mx-auto size-12 text-yellow-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
             </svg>
           </div>
-          <p className="text-yellow-800 font-medium text-lg mb-2 text-pretty">選択した期間・条件にデータがありません</p>
-          <p className="text-yellow-700 text-sm mb-4 text-pretty">
-            以下をお試しください：
+          <p className="text-yellow-800 font-medium text-lg mb-2 text-pretty">
+            選択した期間・条件にデータがありません
           </p>
+          <p className="text-yellow-700 text-sm mb-4 text-pretty">以下をお試しください：</p>
           <ul className="text-yellow-700 text-sm text-left max-w-md mx-auto space-y-2">
             <li>• 期間を広げる（例：開始日を1ヶ月前に設定）</li>
             <li>• 作業者フィルタ・部品フィルタを「全て」に変更</li>
@@ -352,7 +389,9 @@ export default function ChartsPage() {
         <div className="space-y-6">
           {/* 最新日の生産実績サマリー */}
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 md:p-6 rounded-lg shadow-lg">
-            <h3 className="text-lg md:text-2xl font-bold mb-4 text-balance">📊 最新の生産実績 ({latestDaySummary.date})</h3>
+            <h3 className="text-lg md:text-2xl font-bold mb-4 text-balance">
+              📊 最新の生産実績 ({latestDaySummary.date})
+            </h3>
 
             {latestDaySummary.chartData.length === 0 ? (
               <p className="text-blue-100 text-pretty">データがありません</p>
@@ -361,11 +400,17 @@ export default function ChartsPage() {
                 {/* 工程別×作業者別の表 */}
                 <div className="bg-white rounded-lg p-3 md:p-4 overflow-x-auto">
                   <h4 className="text-gray-800 font-bold mb-3 text-sm md:text-base text-balance">
-                    工程別の生産数（作業者別） -
-                    総作業時間: <span className="tabular-nums">{formatTime(latestDaySummary.totalTime)}</span> /
-                    良品率: <span className="tabular-nums">{latestDaySummary.totalQty > 0
-                      ? ((latestDaySummary.totalGood / latestDaySummary.totalQty) * 100).toFixed(1)
-                      : 0}%</span>
+                    工程別の生産数（作業者別） - 総作業時間:{' '}
+                    <span className="tabular-nums">{formatTime(latestDaySummary.totalTime)}</span> /
+                    良品率:{' '}
+                    <span className="tabular-nums">
+                      {latestDaySummary.totalQty > 0
+                        ? ((latestDaySummary.totalGood / latestDaySummary.totalQty) * 100).toFixed(
+                            1
+                          )
+                        : 0}
+                      %
+                    </span>
                   </h4>
                   <table className="w-full text-xs md:text-sm border-collapse">
                     <thead className="bg-gray-100">
@@ -390,7 +435,7 @@ export default function ChartsPage() {
                     <tbody>
                       {latestDaySummary.chartData.map((row, idx) => {
                         const total = latestDaySummary.workers.reduce(
-                          (sum, worker) => sum + (parseInt(String(row[worker] || 0))),
+                          (sum, worker) => sum + parseInt(String(row[worker] || 0)),
                           0
                         );
                         return (
@@ -511,7 +556,9 @@ export default function ChartsPage() {
 
           {/* グラフ2: 人別×工程別の生産性 */}
           <div className="bg-white p-4 md:p-6 rounded-lg shadow">
-            <h3 className="text-base md:text-lg font-bold mb-2 text-balance">人別×工程別の生産性（分/良品）</h3>
+            <h3 className="text-base md:text-lg font-bold mb-2 text-balance">
+              人別×工程別の生産性（分/良品）
+            </h3>
             <p className="text-xs md:text-sm text-gray-600 mb-4 text-pretty">
               誰がどの工程が得意か。数値が小さいほど生産性が高い
             </p>
@@ -578,7 +625,9 @@ export default function ChartsPage() {
 
           {/* グラフ4: 工程別のロス率 */}
           <div className="bg-white p-4 md:p-6 rounded-lg shadow">
-            <h3 className="text-base md:text-lg font-bold mb-2 text-balance">工程別のロス率（%）</h3>
+            <h3 className="text-base md:text-lg font-bold mb-2 text-balance">
+              工程別のロス率（%）
+            </h3>
             <p className="text-xs md:text-sm text-gray-600 mb-4 text-pretty">
               どの工程でロスが多いか。品質改善の優先順位決定に活用
             </p>
@@ -624,8 +673,8 @@ export default function ChartsPage() {
           {/* サマリー */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800 text-pretty">
-              <strong>期間：</strong> {dateFrom} 〜 {dateTo} ／{' '}
-              <strong>データ件数：</strong> <span className="tabular-nums">{logs.length}</span>件
+              <strong>期間：</strong> {dateFrom} 〜 {dateTo} ／ <strong>データ件数：</strong>{' '}
+              <span className="tabular-nums">{logs.length}</span>件
             </p>
           </div>
         </div>

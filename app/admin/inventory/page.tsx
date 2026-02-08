@@ -3,9 +3,19 @@
 import { useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import type { Worker, Part, Operation, ProductVariant, InventoryAdjustment } from '@/lib/types/database';
+import type {
+  Worker,
+  Part,
+  Operation,
+  ProductVariant,
+  InventoryAdjustment,
+} from '@/lib/types/database';
 import { createInventoryCalculator } from '@/lib/utils/inventoryCalculator';
-import type { PartInventory, VariantInventory, OperationInventory } from '@/lib/utils/inventoryCalculator';
+import type {
+  PartInventory,
+  VariantInventory,
+  OperationInventory,
+} from '@/lib/utils/inventoryCalculator';
 import type { WorkLogWithAttributes } from '@/lib/types/inventory';
 import CategoryInventoryGroup from './components/CategoryInventoryGroup';
 import { useInventoryState } from './hooks/useInventoryState';
@@ -48,7 +58,10 @@ export default function InventoryPage() {
       const fetchPromise = Promise.all([
         supabase.from('parts').select('*').eq('active', true).order('order_index'),
         supabase.from('operations').select('*').eq('active', true).order('order_index'),
-        supabase.from('work_logs').select(`
+        supabase
+          .from('work_logs')
+          .select(
+            `
           *,
           work_log_attributes (
             value_id,
@@ -62,7 +75,9 @@ export default function InventoryPage() {
               )
             )
           )
-        `).eq('is_deleted', false),
+        `
+          )
+          .eq('is_deleted', false),
         supabase.from('workers').select('*').eq('active', true),
         supabase.from('bom_consumption').select('*'),
         supabase.from('bom').select('*'),
@@ -93,10 +108,21 @@ export default function InventoryPage() {
         setTimeout(() => reject(new Error('データ取得がタイムアウトしました（30秒）')), 30000)
       );
 
-      const [partsRes, operationsRes, logsRes, workersRes, consumptionsRes, bomRes, variantsRes, adjustmentsRes, opAttrsRes, vAttrsRes, vAttrValsRes, processConsRes, orderConsRes] = await Promise.race([
-        fetchPromise,
-        timeoutPromise
-      ]);
+      const [
+        partsRes,
+        operationsRes,
+        logsRes,
+        workersRes,
+        consumptionsRes,
+        bomRes,
+        variantsRes,
+        adjustmentsRes,
+        opAttrsRes,
+        vAttrsRes,
+        vAttrValsRes,
+        processConsRes,
+        orderConsRes,
+      ] = await Promise.race([fetchPromise, timeoutPromise]);
 
       // 全データを一括でdispatch
       dispatch({
@@ -148,7 +174,17 @@ export default function InventoryPage() {
 
     const inventoryData = calculator.calculate(parts);
     dispatch({ type: 'SET_INVENTORY', payload: inventoryData });
-  }, [logs, adjustments, bomConsumptions, processConsumptions, orderConsumptions, operations, variants, operationAttributes, parts]);
+  }, [
+    logs,
+    adjustments,
+    bomConsumptions,
+    processConsumptions,
+    orderConsumptions,
+    operations,
+    variants,
+    operationAttributes,
+    parts,
+  ]);
 
   // 初回データ取得
   useEffect(() => {
@@ -178,7 +214,15 @@ export default function InventoryPage() {
     return () => {
       isMounted = false;
     };
-  }, [parts, operations, logs, adjustments, processConsumptions, orderConsumptions, calculateInventory]);
+  }, [
+    parts,
+    operations,
+    logs,
+    adjustments,
+    processConsumptions,
+    orderConsumptions,
+    calculateInventory,
+  ]);
 
   const openModal = useCallback((partId: string) => {
     dispatch({ type: 'OPEN_MODAL', payload: partId });
@@ -198,24 +242,33 @@ export default function InventoryPage() {
 
     const qty = parseInt(adjustmentQuantity);
     if (!qty || qty <= 0) {
-      dispatch({ type: 'SET_MESSAGE', payload: { type: 'error', text: '数量は1以上で入力してください' } });
+      dispatch({
+        type: 'SET_MESSAGE',
+        payload: { type: 'error', text: '数量は1以上で入力してください' },
+      });
       return;
     }
 
     // この工程に属性が設定されているか確認
-    const opAttrs = operationAttributes.filter(oa => oa.operation_id === selectedOperationId);
+    const opAttrs = operationAttributes.filter((oa) => oa.operation_id === selectedOperationId);
 
     // 属性が設定されている場合、必須チェック
     if (opAttrs.length > 0) {
       const missingAttributes = opAttrs.filter(
-        oa => !selectedAdjustmentAttributeValues[oa.attribute_id]
+        (oa) => !selectedAdjustmentAttributeValues[oa.attribute_id]
       );
 
       if (missingAttributes.length > 0) {
         const attrNames = missingAttributes
-          .map(oa => variantAttributes.find(va => va.attribute_id === oa.attribute_id)?.name || '不明')
+          .map(
+            (oa) =>
+              variantAttributes.find((va) => va.attribute_id === oa.attribute_id)?.name || '不明'
+          )
           .join(', ');
-        dispatch({ type: 'SET_MESSAGE', payload: { type: 'error', text: `以下の属性を選択してください: ${attrNames}` } });
+        dispatch({
+          type: 'SET_MESSAGE',
+          payload: { type: 'error', text: `以下の属性を選択してください: ${attrNames}` },
+        });
         return;
       }
     }
@@ -223,7 +276,13 @@ export default function InventoryPage() {
     // システム作業者を取得
     const systemWorker = workers.find((w) => w.name === 'システム');
     if (!systemWorker) {
-      dispatch({ type: 'SET_MESSAGE', payload: { type: 'error', text: 'システム作業者が見つかりません。データベースにシステム作業者を追加してください。' } });
+      dispatch({
+        type: 'SET_MESSAGE',
+        payload: {
+          type: 'error',
+          text: 'システム作業者が見つかりません。データベースにシステム作業者を追加してください。',
+        },
+      });
       return;
     }
 
@@ -252,7 +311,7 @@ export default function InventoryPage() {
       // 属性値が選択されている場合、inventory_adjustment_attributes に保存
       const attributeValueIds = Object.values(selectedAdjustmentAttributeValues).filter(Boolean);
       if (attributeValueIds.length > 0 && adjustment) {
-        const attributeInserts = attributeValueIds.map(valueId => ({
+        const attributeInserts = attributeValueIds.map((valueId) => ({
           adjustment_id: adjustment.adjustment_id,
           value_id: valueId,
         }));
@@ -267,7 +326,10 @@ export default function InventoryPage() {
         }
       }
 
-      dispatch({ type: 'SET_MESSAGE', payload: { type: 'success', text: '在庫調整を保存しました' } });
+      dispatch({
+        type: 'SET_MESSAGE',
+        payload: { type: 'success', text: '在庫調整を保存しました' },
+      });
 
       // データを再取得
       await fetchData();
@@ -284,47 +346,62 @@ export default function InventoryPage() {
     }
   };
 
-  const getPartOperations = useCallback((partId: string) => {
-    return operations.filter((op) => op.part_id === partId).sort((a, b) => a.order_index - b.order_index);
-  }, [operations]);
+  const getPartOperations = useCallback(
+    (partId: string) => {
+      return operations
+        .filter((op) => op.part_id === partId)
+        .sort((a, b) => a.order_index - b.order_index);
+    },
+    [operations]
+  );
 
-  const getPartName = useCallback((partId: string) => {
-    return parts.find((p) => p.part_id === partId)?.name || '';
-  }, [parts]);
+  const getPartName = useCallback(
+    (partId: string) => {
+      return parts.find((p) => p.part_id === partId)?.name || '';
+    },
+    [parts]
+  );
 
   // 在庫詳細モーダルを開く
-  const openDetailModal = useCallback(async (partId: string, partName: string, operationId: string, operationName: string, inventory: number, variants?: VariantInventory[]) => {
-    dispatch({
-      type: 'OPEN_DETAIL_MODAL',
-      payload: {
-        partId,
-        partName,
-        operationId,
-        operationName,
-        inventory,
-        variants,
-      },
-    });
+  const openDetailModal = useCallback(
+    async (
+      partId: string,
+      partName: string,
+      operationId: string,
+      operationName: string,
+      inventory: number,
+      variants?: VariantInventory[]
+    ) => {
+      dispatch({
+        type: 'OPEN_DETAIL_MODAL',
+        payload: {
+          partId,
+          partName,
+          operationId,
+          operationName,
+          inventory,
+          variants,
+        },
+      });
 
-    // その工程の作業履歴を取得
-    const operationLogs = logs.filter(log =>
-      log.operation_id === operationId &&
-      log.is_deleted === false
-    );
+      // その工程の作業履歴を取得
+      const operationLogs = logs.filter(
+        (log) => log.operation_id === operationId && log.is_deleted === false
+      );
 
-    // その工程の在庫調整履歴を取得
-    const operationAdjustments = adjustments.filter(adj =>
-      adj.operation_id === operationId
-    );
+      // その工程の在庫調整履歴を取得
+      const operationAdjustments = adjustments.filter((adj) => adj.operation_id === operationId);
 
-    dispatch({
-      type: 'SET_INVENTORY_LOGS',
-      payload: {
-        logs: operationLogs,
-        adjustments: operationAdjustments,
-      },
-    });
-  }, [logs, adjustments]);
+      dispatch({
+        type: 'SET_INVENTORY_LOGS',
+        payload: {
+          logs: operationLogs,
+          adjustments: operationAdjustments,
+        },
+      });
+    },
+    [logs, adjustments]
+  );
 
   // 在庫詳細モーダルを閉じる
   const closeDetailModal = useCallback(() => {
@@ -438,7 +515,7 @@ export default function InventoryPage() {
       // variant_idから属性値を取得して保存
       if (adjustment && variantId !== 'uncategorized') {
         const valueIds = variantId.split('|');
-        const attributeInserts = valueIds.map(valueId => ({
+        const attributeInserts = valueIds.map((valueId) => ({
           adjustment_id: adjustment.adjustment_id,
           value_id: valueId,
         }));
@@ -508,7 +585,7 @@ export default function InventoryPage() {
       // variant_idから属性値を取得して保存
       if (workLog && variantId !== 'uncategorized') {
         const valueIds = variantId.split('|');
-        const attributeInserts = valueIds.map(valueId => ({
+        const attributeInserts = valueIds.map((valueId) => ({
           work_log_id: workLog.log_id,
           value_id: valueId,
         }));
@@ -524,16 +601,15 @@ export default function InventoryPage() {
       }
 
       // 現在の工程から在庫を減らす（process_consumptionに記録）
-      const { error: consumptionError } = await supabase
-        .from('process_consumption')
-        .insert({
-          work_log_id: workLog.log_id,
-          consumed_operation_id: currentOperationId,
-          consumed_quantity: quantity,
-          consumed_attribute_values: variantId !== 'uncategorized'
+      const { error: consumptionError } = await supabase.from('process_consumption').insert({
+        work_log_id: workLog.log_id,
+        consumed_operation_id: currentOperationId,
+        consumed_quantity: quantity,
+        consumed_attribute_values:
+          variantId !== 'uncategorized'
             ? Object.fromEntries(variantId.split('|').map((id, idx) => [`attr_${idx}`, id]))
             : {},
-        });
+      });
 
       if (consumptionError) throw consumptionError;
 
@@ -546,51 +622,54 @@ export default function InventoryPage() {
   };
 
   // 完成品（三味線）を作るのに必要な部品の個数を取得
-  const getShamisen組Count = useCallback((partId: string, inventory: number) => {
-    // まず完成品（三味線）で直接使われるか確認
-    const shamisenPart = parts.find((p) => p.name === '完成品（三味線）');
-    if (shamisenPart) {
-      const assemblyOp = operations.find(
-        (op) => op.part_id === shamisenPart.part_id && op.name === '最終組み立て'
-      );
-      if (assemblyOp) {
-        const bom = bomData.find(
-          (b) => b.operation_id === assemblyOp.operation_id && b.consumed_part_id === partId
+  const getShamisen組Count = useCallback(
+    (partId: string, inventory: number) => {
+      // まず完成品（三味線）で直接使われるか確認
+      const shamisenPart = parts.find((p) => p.name === '完成品（三味線）');
+      if (shamisenPart) {
+        const assemblyOp = operations.find(
+          (op) => op.part_id === shamisenPart.part_id && op.name === '最終組み立て'
         );
-        if (bom) {
-          // 1個で1台分なら表示しない
-          if (bom.quantity_per_unit === 1) return null;
+        if (assemblyOp) {
+          const bom = bomData.find(
+            (b) => b.operation_id === assemblyOp.operation_id && b.consumed_part_id === partId
+          );
+          if (bom) {
+            // 1個で1台分なら表示しない
+            if (bom.quantity_per_unit === 1) return null;
 
-          const count = Math.floor(inventory / bom.quantity_per_unit);
-          const remainder = inventory % bom.quantity_per_unit;
-          return { count, remainder, unit: '三味線', unitCount: bom.quantity_per_unit };
+            const count = Math.floor(inventory / bom.quantity_per_unit);
+            const remainder = inventory % bom.quantity_per_unit;
+            return { count, remainder, unit: '三味線', unitCount: bom.quantity_per_unit };
+          }
         }
       }
-    }
 
-    // 胴の組み立てで使われるか確認（胴-短手、胴-長手）
-    const bodyPart = parts.find((p) => p.name === '胴');
-    if (bodyPart) {
-      const bodyAssemblyOp = operations.find(
-        (op) => op.part_id === bodyPart.part_id && op.name === '組み立て'
-      );
-      if (bodyAssemblyOp) {
-        const bom = bomData.find(
-          (b) => b.operation_id === bodyAssemblyOp.operation_id && b.consumed_part_id === partId
+      // 胴の組み立てで使われるか確認（胴-短手、胴-長手）
+      const bodyPart = parts.find((p) => p.name === '胴');
+      if (bodyPart) {
+        const bodyAssemblyOp = operations.find(
+          (op) => op.part_id === bodyPart.part_id && op.name === '組み立て'
         );
-        if (bom) {
-          // 1個で1個分なら表示しない
-          if (bom.quantity_per_unit === 1) return null;
+        if (bodyAssemblyOp) {
+          const bom = bomData.find(
+            (b) => b.operation_id === bodyAssemblyOp.operation_id && b.consumed_part_id === partId
+          );
+          if (bom) {
+            // 1個で1個分なら表示しない
+            if (bom.quantity_per_unit === 1) return null;
 
-          const count = Math.floor(inventory / bom.quantity_per_unit);
-          const remainder = inventory % bom.quantity_per_unit;
-          return { count, remainder, unit: '胴', unitCount: bom.quantity_per_unit };
+            const count = Math.floor(inventory / bom.quantity_per_unit);
+            const remainder = inventory % bom.quantity_per_unit;
+            return { count, remainder, unit: '胴', unitCount: bom.quantity_per_unit };
+          }
         }
       }
-    }
 
-    return null;
-  }, [parts, operations, bomData]);
+      return null;
+    },
+    [parts, operations, bomData]
+  );
 
   if (loading) {
     return (
@@ -611,128 +690,154 @@ export default function InventoryPage() {
 
       <div className="space-y-6">
         {/* 胴グループ */}
-        {inventory.some(p => p.part_name.startsWith('胴')) && (
+        {inventory.some((p) => p.part_name.startsWith('胴')) && (
           <div className="bg-gray-100 rounded-lg p-3 md:p-6 shadow-sm">
-            <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4 text-balance">【胴】</h2>
+            <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4 text-balance">
+              【胴】
+            </h2>
 
-            {inventory.filter(p => p.part_name.startsWith('胴')).map((partData) => (
-              <div key={partData.part_id} className="mb-6 last:mb-0">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-base font-semibold text-gray-700 text-balance">
-                    {partData.part_name}
-                  </h3>
-                  <button
-                    onClick={() => openModal(partData.part_id)}
-                    className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    + 在庫追加
-                  </button>
-                </div>
+            {inventory
+              .filter((p) => p.part_name.startsWith('胴'))
+              .map((partData) => (
+                <div key={partData.part_id} className="mb-6 last:mb-0">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-base font-semibold text-gray-700 text-balance">
+                      {partData.part_name}
+                    </h3>
+                    <button
+                      onClick={() => openModal(partData.part_id)}
+                      className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium hover:bg-blue-700 transition-colors"
+                    >
+                      + 在庫追加
+                    </button>
+                  </div>
 
-                {partData.operations.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3">
-                    {partData.operations.map((op) => {
-                      const shamisenInfo = getShamisen組Count(partData.part_id, op.inventory);
-                      return (
-                        <div
-                          key={op.operation_id}
-                          onClick={() => openDetailModal(partData.part_id, partData.part_name, op.operation_id, op.operation_name, op.inventory, op.variants)}
-                          className="bg-white rounded-lg border-2 border-gray-300 p-2 md:p-3 shadow hover:shadow-md transition-shadow cursor-pointer hover:border-blue-400"
-                        >
-                          <div className="text-xs text-gray-600 mb-1">
-                            {op.operation_name}
-                          </div>
-                          {/* バリアントがある場合は全体の個数を小さく表示 */}
-                          {op.variants && op.variants.length > 0 ? (
-                            <>
-                              <div className="text-xs text-gray-400 mb-2 tabular-nums">
-                                合計: {op.inventory}個
-                              </div>
-                              <div className="space-y-2">
-                                {op.variants.map(v => {
-                                  const tags: { text: string; color: string }[] = [];
-                                  const attributePairs = v.variant_name.split(',').map(pair => pair.trim());
-                                  attributePairs.forEach(pair => {
-                                    const [attrName, valueName] = pair.split(':').map(s => s.trim());
-                                    if (valueName) {
-                                      let color = 'bg-gray-100 text-gray-700';
-                                      if (valueName.includes('島村')) {
-                                        color = 'bg-blue-100 text-blue-700';
-                                      } else if (valueName.includes('通常')) {
-                                        color = 'bg-emerald-100 text-emerald-700';
-                                      } else if (valueName.includes('赤富士')) {
-                                        color = 'bg-rose-100 text-rose-700';
-                                      } else if (valueName.includes('花柄')) {
-                                        color = 'bg-pink-100 text-pink-700';
-                                      } else if (valueName.includes('唐草')) {
-                                        color = 'bg-purple-100 text-purple-700';
-                                      } else if (valueName.includes('無地')) {
-                                        color = 'bg-slate-100 text-slate-700';
-                                      }
-                                      tags.push({ text: valueName, color });
-                                    }
-                                  });
-
-                                  return (
-                                    <div
-                                      key={v.variant_id}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        openDetailModal(partData.part_id, partData.part_name, op.operation_id, op.operation_name, op.inventory, op.variants);
-                                      }}
-                                      className="bg-white border-2 border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-blue-400 hover:shadow-md transition-all"
-                                    >
-                                      <div className="flex flex-wrap gap-1.5 mb-2">
-                                        {tags.map((tag, idx) => (
-                                          <span key={idx} className={`${tag.color} text-sm font-medium px-2.5 py-0.5 rounded-full`}>
-                                            {tag.text}
-                                          </span>
-                                        ))}
-                                      </div>
-                                      <div className="text-2xl font-bold text-gray-800 tabular-nums">
-                                        {v.inventory}
-                                        <span className="text-sm text-gray-600 ml-1">個</span>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <div className="text-xl md:text-2xl font-bold text-blue-600 tabular-nums">
-                                {op.inventory}
-                                <span className="text-xs md:text-sm text-gray-600 ml-1">個</span>
-                              </div>
-                              {/* 糸巻き、胴-短手、胴-長手の場合、ちんとん換算を表示 */}
-                              {(partData.part_name === '糸巻き' || partData.part_name === '胴-短手' || partData.part_name === '胴-長手') && (
-                                <div className="text-xs text-gray-500 mt-1 tabular-nums">
-                                  ちんとん{Math.floor(op.inventory / 3)}個分
-                                  {op.inventory % 3 > 0 && ` +${op.inventory % 3}個`}
+                  {partData.operations.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3">
+                      {partData.operations.map((op) => {
+                        const shamisenInfo = getShamisen組Count(partData.part_id, op.inventory);
+                        return (
+                          <div
+                            key={op.operation_id}
+                            onClick={() =>
+                              openDetailModal(
+                                partData.part_id,
+                                partData.part_name,
+                                op.operation_id,
+                                op.operation_name,
+                                op.inventory,
+                                op.variants
+                              )
+                            }
+                            className="bg-white rounded-lg border-2 border-gray-300 p-2 md:p-3 shadow hover:shadow-md transition-shadow cursor-pointer hover:border-blue-400"
+                          >
+                            <div className="text-xs text-gray-600 mb-1">{op.operation_name}</div>
+                            {/* バリアントがある場合は全体の個数を小さく表示 */}
+                            {op.variants && op.variants.length > 0 ? (
+                              <>
+                                <div className="text-xs text-gray-400 mb-2 tabular-nums">
+                                  合計: {op.inventory}個
                                 </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-500 py-3 text-sm text-pretty">
-                    在庫なし（「+ 在庫追加」から登録できます）
-                  </div>
-                )}
-              </div>
-            ))}
+                                <div className="space-y-2">
+                                  {op.variants.map((v) => {
+                                    const tags: { text: string; color: string }[] = [];
+                                    const attributePairs = v.variant_name
+                                      .split(',')
+                                      .map((pair) => pair.trim());
+                                    attributePairs.forEach((pair) => {
+                                      const [attrName, valueName] = pair
+                                        .split(':')
+                                        .map((s) => s.trim());
+                                      if (valueName) {
+                                        let color = 'bg-gray-100 text-gray-700';
+                                        if (valueName.includes('島村')) {
+                                          color = 'bg-blue-100 text-blue-700';
+                                        } else if (valueName.includes('通常')) {
+                                          color = 'bg-emerald-100 text-emerald-700';
+                                        } else if (valueName.includes('赤富士')) {
+                                          color = 'bg-rose-100 text-rose-700';
+                                        } else if (valueName.includes('花柄')) {
+                                          color = 'bg-pink-100 text-pink-700';
+                                        } else if (valueName.includes('唐草')) {
+                                          color = 'bg-purple-100 text-purple-700';
+                                        } else if (valueName.includes('無地')) {
+                                          color = 'bg-slate-100 text-slate-700';
+                                        }
+                                        tags.push({ text: valueName, color });
+                                      }
+                                    });
+
+                                    return (
+                                      <div
+                                        key={v.variant_id}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openDetailModal(
+                                            partData.part_id,
+                                            partData.part_name,
+                                            op.operation_id,
+                                            op.operation_name,
+                                            op.inventory,
+                                            op.variants
+                                          );
+                                        }}
+                                        className="bg-white border-2 border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-blue-400 hover:shadow-md transition-all"
+                                      >
+                                        <div className="flex flex-wrap gap-1.5 mb-2">
+                                          {tags.map((tag, idx) => (
+                                            <span
+                                              key={idx}
+                                              className={`${tag.color} text-sm font-medium px-2.5 py-0.5 rounded-full`}
+                                            >
+                                              {tag.text}
+                                            </span>
+                                          ))}
+                                        </div>
+                                        <div className="text-2xl font-bold text-gray-800 tabular-nums">
+                                          {v.inventory}
+                                          <span className="text-sm text-gray-600 ml-1">個</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="text-xl md:text-2xl font-bold text-blue-600 tabular-nums">
+                                  {op.inventory}
+                                  <span className="text-xs md:text-sm text-gray-600 ml-1">個</span>
+                                </div>
+                                {/* 糸巻き、胴-短手、胴-長手の場合、ちんとん換算を表示 */}
+                                {(partData.part_name === '糸巻き' ||
+                                  partData.part_name === '胴-短手' ||
+                                  partData.part_name === '胴-長手') && (
+                                  <div className="text-xs text-gray-500 mt-1 tabular-nums">
+                                    ちんとん{Math.floor(op.inventory / 3)}個分
+                                    {op.inventory % 3 > 0 && ` +${op.inventory % 3}個`}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-500 py-3 text-sm text-pretty">
+                      在庫なし（「+ 在庫追加」から登録できます）
+                    </div>
+                  )}
+                </div>
+              ))}
           </div>
         )}
 
         {/* その他の部品 */}
-        {inventory.filter(p => !p.part_name.startsWith('胴')).map((partData) => (
-            <div
-              key={partData.part_id}
-              className="bg-gray-100 rounded-lg p-3 md:p-6 shadow-sm"
-            >
+        {inventory
+          .filter((p) => !p.part_name.startsWith('胴'))
+          .map((partData) => (
+            <div key={partData.part_id} className="bg-gray-100 rounded-lg p-3 md:p-6 shadow-sm">
               {/* 部品名ヘッダーと在庫追加ボタン */}
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg md:text-xl font-bold text-gray-800 text-balance">
@@ -754,7 +859,16 @@ export default function InventoryPage() {
                     return (
                       <div
                         key={op.operation_id}
-                        onClick={() => openDetailModal(partData.part_id, partData.part_name, op.operation_id, op.operation_name, op.inventory, op.variants)}
+                        onClick={() =>
+                          openDetailModal(
+                            partData.part_id,
+                            partData.part_name,
+                            op.operation_id,
+                            op.operation_name,
+                            op.inventory,
+                            op.variants
+                          )
+                        }
                         className="bg-white rounded-lg border-2 border-gray-300 p-2 md:p-4 shadow hover:shadow-md transition-shadow cursor-pointer hover:border-blue-400"
                       >
                         <div className="text-xs md:text-sm text-gray-600 mb-1 md:mb-2">
@@ -767,11 +881,15 @@ export default function InventoryPage() {
                               合計: {op.inventory}個
                             </div>
                             <div className="space-y-2">
-                              {op.variants.map(v => {
+                              {op.variants.map((v) => {
                                 const tags: { text: string; color: string }[] = [];
-                                const attributePairs = v.variant_name.split(',').map(pair => pair.trim());
-                                attributePairs.forEach(pair => {
-                                  const [attrName, valueName] = pair.split(':').map(s => s.trim());
+                                const attributePairs = v.variant_name
+                                  .split(',')
+                                  .map((pair) => pair.trim());
+                                attributePairs.forEach((pair) => {
+                                  const [attrName, valueName] = pair
+                                    .split(':')
+                                    .map((s) => s.trim());
                                   if (valueName) {
                                     let color = 'bg-gray-100 text-gray-700';
                                     if (valueName.includes('島村')) {
@@ -796,13 +914,23 @@ export default function InventoryPage() {
                                     key={v.variant_id}
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      openDetailModal(partData.part_id, partData.part_name, op.operation_id, op.operation_name, op.inventory, op.variants);
+                                      openDetailModal(
+                                        partData.part_id,
+                                        partData.part_name,
+                                        op.operation_id,
+                                        op.operation_name,
+                                        op.inventory,
+                                        op.variants
+                                      );
                                     }}
                                     className="bg-white border-2 border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-blue-400 hover:shadow-md transition-all"
                                   >
                                     <div className="flex flex-wrap gap-1.5 mb-2">
                                       {tags.map((tag, idx) => (
-                                        <span key={idx} className={`${tag.color} text-sm font-medium px-2.5 py-0.5 rounded-full`}>
+                                        <span
+                                          key={idx}
+                                          className={`${tag.color} text-sm font-medium px-2.5 py-0.5 rounded-full`}
+                                        >
                                           {tag.text}
                                         </span>
                                       ))}
@@ -823,7 +951,9 @@ export default function InventoryPage() {
                               <span className="text-sm md:text-lg text-gray-600 ml-1">個</span>
                             </div>
                             {/* 糸巻き、胴-短手、胴-長手の場合、ちんとん換算を表示 */}
-                            {(partData.part_name === '糸巻き' || partData.part_name === '胴-短手' || partData.part_name === '胴-長手') && (
+                            {(partData.part_name === '糸巻き' ||
+                              partData.part_name === '胴-短手' ||
+                              partData.part_name === '胴-長手') && (
                               <div className="text-xs text-gray-500 mt-1 tabular-nums">
                                 ちんとん{Math.floor(op.inventory / 3)}個分
                                 {op.inventory % 3 > 0 && ` +${op.inventory % 3}個`}
@@ -889,53 +1019,63 @@ export default function InventoryPage() {
             </div>
 
             {/* 属性値選択 */}
-            {selectedOperationId && (() => {
-              const opAttrs = operationAttributes.filter(oa => oa.operation_id === selectedOperationId);
-              if (opAttrs.length === 0) return null;
+            {selectedOperationId &&
+              (() => {
+                const opAttrs = operationAttributes.filter(
+                  (oa) => oa.operation_id === selectedOperationId
+                );
+                if (opAttrs.length === 0) return null;
 
-              return (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    属性 <span className="text-red-500">*</span>
-                  </label>
-                  <div className="space-y-3">
-                    {opAttrs.map((opAttr) => {
-                      const attribute = variantAttributes.find(va => va.attribute_id === opAttr.attribute_id);
-                      if (!attribute) return null;
+                return (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      属性 <span className="text-red-500">*</span>
+                    </label>
+                    <div className="space-y-3">
+                      {opAttrs.map((opAttr) => {
+                        const attribute = variantAttributes.find(
+                          (va) => va.attribute_id === opAttr.attribute_id
+                        );
+                        if (!attribute) return null;
 
-                      const values = variantAttributeValues.filter(vav => vav.attribute_id === attribute.attribute_id);
+                        const values = variantAttributeValues.filter(
+                          (vav) => vav.attribute_id === attribute.attribute_id
+                        );
 
-                      return (
-                        <div key={attribute.attribute_id} className="bg-gray-50 p-3 rounded-lg">
-                          <div className="text-sm font-medium text-gray-700 mb-2">{attribute.name}</div>
-                          <div className="grid grid-cols-2 gap-2">
-                            {values.map((value) => (
-                              <button
-                                key={value.value_id}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedAdjustmentAttributeValues({
-                                    ...selectedAdjustmentAttributeValues,
-                                    [attribute.attribute_id]: value.value_id
-                                  });
-                                }}
-                                className={`p-2 rounded-lg border-2 text-sm transition-colors ${
-                                  selectedAdjustmentAttributeValues[attribute.attribute_id] === value.value_id
-                                    ? 'bg-blue-600 text-white border-blue-600'
-                                    : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
-                                }`}
-                              >
-                                {value.name}
-                              </button>
-                            ))}
+                        return (
+                          <div key={attribute.attribute_id} className="bg-gray-50 p-3 rounded-lg">
+                            <div className="text-sm font-medium text-gray-700 mb-2">
+                              {attribute.name}
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              {values.map((value) => (
+                                <button
+                                  key={value.value_id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedAdjustmentAttributeValues({
+                                      ...selectedAdjustmentAttributeValues,
+                                      [attribute.attribute_id]: value.value_id,
+                                    });
+                                  }}
+                                  className={`p-2 rounded-lg border-2 text-sm transition-colors ${
+                                    selectedAdjustmentAttributeValues[attribute.attribute_id] ===
+                                    value.value_id
+                                      ? 'bg-blue-600 text-white border-blue-600'
+                                      : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                                  }`}
+                                >
+                                  {value.name}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
 
             {/* 数量入力 */}
             <div className="mb-4">
@@ -953,9 +1093,7 @@ export default function InventoryPage() {
 
             {/* 備考入力 */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                備考（任意）
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">備考（任意）</label>
               <input
                 type="text"
                 value={adjustmentNote}
@@ -997,7 +1135,11 @@ export default function InventoryPage() {
                   {selectedInventoryDetail.partName} - {selectedInventoryDetail.operationName}
                 </h3>
                 <p className="text-sm text-gray-600 mt-1 text-pretty">
-                  現在の在庫: <span className="text-2xl font-bold text-blue-600 tabular-nums">{selectedInventoryDetail.inventory}</span> 個
+                  現在の在庫:{' '}
+                  <span className="text-2xl font-bold text-blue-600 tabular-nums">
+                    {selectedInventoryDetail.inventory}
+                  </span>{' '}
+                  個
                 </p>
               </div>
               <button
@@ -1014,11 +1156,11 @@ export default function InventoryPage() {
               <div className="mb-6">
                 <h4 className="text-lg font-semibold text-gray-800 mb-3">バリエーション別在庫</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {selectedInventoryDetail.variants.map(v => {
+                  {selectedInventoryDetail.variants.map((v) => {
                     const tags: { text: string; color: string }[] = [];
-                    const attributePairs = v.variant_name.split(',').map(pair => pair.trim());
-                    attributePairs.forEach(pair => {
-                      const [attrName, valueName] = pair.split(':').map(s => s.trim());
+                    const attributePairs = v.variant_name.split(',').map((pair) => pair.trim());
+                    attributePairs.forEach((pair) => {
+                      const [attrName, valueName] = pair.split(':').map((s) => s.trim());
                       if (valueName) {
                         let color = 'bg-gray-100 text-gray-700';
                         if (valueName.includes('島村')) {
@@ -1043,11 +1185,17 @@ export default function InventoryPage() {
                     const moveQty = variantMoveQty[cardKey] || 0;
 
                     return (
-                      <div key={v.variant_id} className="bg-gray-50 border-2 border-gray-200 rounded-lg p-2.5">
+                      <div
+                        key={v.variant_id}
+                        className="bg-gray-50 border-2 border-gray-200 rounded-lg p-2.5"
+                      >
                         {/* タグ */}
                         <div className="flex flex-wrap gap-1 mb-2">
                           {tags.map((tag, idx) => (
-                            <span key={idx} className={`${tag.color} text-xs font-medium px-2 py-0.5 rounded-full`}>
+                            <span
+                              key={idx}
+                              className={`${tag.color} text-xs font-medium px-2 py-0.5 rounded-full`}
+                            >
                               {tag.text}
                             </span>
                           ))}
@@ -1071,7 +1219,10 @@ export default function InventoryPage() {
                               type="text"
                               value={adjustQty || ''}
                               onChange={(e) => {
-                                setVariantAdjustQty({ ...variantAdjustQty, [cardKey]: e.target.value });
+                                setVariantAdjustQty({
+                                  ...variantAdjustQty,
+                                  [cardKey]: e.target.value,
+                                });
                               }}
                               className="flex-1 px-2 py-1.5 border-2 border-gray-300 rounded text-center text-sm font-semibold tabular-nums"
                               placeholder="±数量"
@@ -1082,12 +1233,20 @@ export default function InventoryPage() {
                               const input = adjustQty || '';
                               const adjustQtyNum = parseInt(input);
 
-                              if (input === '' || isNaN(adjustQtyNum) || adjustQtyNum === 0 || adjusting[cardKey]) return;
+                              if (
+                                input === '' ||
+                                isNaN(adjustQtyNum) ||
+                                adjustQtyNum === 0 ||
+                                adjusting[cardKey]
+                              )
+                                return;
 
                               // 在庫がマイナスにならないかチェック
                               const finalInventory = v.inventory + adjustQtyNum;
                               if (finalInventory < 0) {
-                                toast.error(`在庫が不足しています。現在の在庫: ${v.inventory}個（最大で-${v.inventory}個まで調整可能）`);
+                                toast.error(
+                                  `在庫が不足しています。現在の在庫: ${v.inventory}個（最大で-${v.inventory}個まで調整可能）`
+                                );
                                 return;
                               }
 
@@ -1113,7 +1272,9 @@ export default function InventoryPage() {
 
                         {/* 次工程へ移動 */}
                         <div className="border-t pt-2">
-                          <div className="text-xs font-semibold text-gray-700 mb-1.5">次工程へ移動</div>
+                          <div className="text-xs font-semibold text-gray-700 mb-1.5">
+                            次工程へ移動
+                          </div>
                           <div className="flex items-center gap-1.5 mb-1.5">
                             <input
                               type="text"
@@ -1130,8 +1291,18 @@ export default function InventoryPage() {
                               const input = moveQty || '';
                               const moveQtyNum = parseInt(input);
 
-                              if (input === '' || isNaN(moveQtyNum) || moveQtyNum <= 0 || moveQtyNum > v.inventory || moving[cardKey]) {
-                                if (input !== '' && (!isNaN(moveQtyNum) && (moveQtyNum <= 0 || moveQtyNum > v.inventory))) {
+                              if (
+                                input === '' ||
+                                isNaN(moveQtyNum) ||
+                                moveQtyNum <= 0 ||
+                                moveQtyNum > v.inventory ||
+                                moving[cardKey]
+                              ) {
+                                if (
+                                  input !== '' &&
+                                  !isNaN(moveQtyNum) &&
+                                  (moveQtyNum <= 0 || moveQtyNum > v.inventory)
+                                ) {
                                   toast.error('数量を正しく入力してください');
                                 }
                                 return;
@@ -1184,7 +1355,9 @@ export default function InventoryPage() {
                       // 在庫がマイナスにならないかチェック
                       const finalInventory = selectedInventoryDetail.inventory + qty;
                       if (finalInventory < 0) {
-                        toast.error(`在庫が不足しています。現在の在庫: ${selectedInventoryDetail.inventory}個（最大で-${selectedInventoryDetail.inventory}個まで調整可能）`);
+                        toast.error(
+                          `在庫が不足しています。現在の在庫: ${selectedInventoryDetail.inventory}個（最大で-${selectedInventoryDetail.inventory}個まで調整可能）`
+                        );
                         return;
                       }
 
@@ -1228,9 +1401,13 @@ export default function InventoryPage() {
 
             {/* 在庫調整履歴一覧 */}
             <div className="mb-6">
-              <h4 className="text-lg font-semibold text-gray-800 mb-3 text-balance">在庫調整履歴</h4>
+              <h4 className="text-lg font-semibold text-gray-800 mb-3 text-balance">
+                在庫調整履歴
+              </h4>
               {inventoryAdjustmentLogs.length === 0 ? (
-                <p className="text-gray-500 text-center py-4 text-pretty">在庫調整履歴がありません</p>
+                <p className="text-gray-500 text-center py-4 text-pretty">
+                  在庫調整履歴がありません
+                </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -1242,22 +1419,30 @@ export default function InventoryPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {inventoryAdjustmentLogs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((adj) => (
-                        <tr key={adj.adjustment_id} className="border-b hover:bg-gray-50">
-                          <td className="p-2">
-                            {new Date(adj.created_at).toLocaleDateString('ja-JP', {
-                              month: '2-digit',
-                              day: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </td>
-                          <td className={`p-2 text-right font-semibold tabular-nums ${adj.adjustment_quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {adj.adjustment_quantity > 0 ? '+' : ''}{adj.adjustment_quantity}
-                          </td>
-                          <td className="p-2">{adj.note || '-'}</td>
-                        </tr>
-                      ))}
+                      {inventoryAdjustmentLogs
+                        .sort(
+                          (a, b) =>
+                            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                        )
+                        .map((adj) => (
+                          <tr key={adj.adjustment_id} className="border-b hover:bg-gray-50">
+                            <td className="p-2">
+                              {new Date(adj.created_at).toLocaleDateString('ja-JP', {
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </td>
+                            <td
+                              className={`p-2 text-right font-semibold tabular-nums ${adj.adjustment_quantity > 0 ? 'text-green-600' : 'text-red-600'}`}
+                            >
+                              {adj.adjustment_quantity > 0 ? '+' : ''}
+                              {adj.adjustment_quantity}
+                            </td>
+                            <td className="p-2">{adj.note || '-'}</td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>
@@ -1283,93 +1468,110 @@ export default function InventoryPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {inventoryLogs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((log) => {
-                        const worker = workers.find((w) => w.worker_id === log.worker_id);
-                        const isEditing = editingLogId === log.log_id;
+                      {inventoryLogs
+                        .sort(
+                          (a, b) =>
+                            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                        )
+                        .map((log) => {
+                          const worker = workers.find((w) => w.worker_id === log.worker_id);
+                          const isEditing = editingLogId === log.log_id;
 
-                        return (
-                          <tr key={log.log_id} className="border-b hover:bg-gray-50">
-                            <td className="p-2">
-                              {new Date(log.created_at).toLocaleDateString('ja-JP', {
-                                month: '2-digit',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </td>
-                            <td className="p-2">{worker?.name || '不明'}</td>
-                            <td className="p-2 text-right tabular-nums">
-                              {isEditing ? (
-                                <input
-                                  type="text"
-                                  value={editFormData.quantity}
-                                  onChange={(e) => setEditFormData({ ...editFormData, quantity: parseInt(e.target.value) || 0 })}
-                                  className="w-20 p-1 border rounded text-right tabular-nums"
-                                />
-                              ) : (
-                                log.quantity
-                              )}
-                            </td>
-                            <td className="p-2 text-right tabular-nums">
-                              {isEditing ? (
-                                <input
-                                  type="text"
-                                  value={editFormData.loss_quantity}
-                                  onChange={(e) => setEditFormData({ ...editFormData, loss_quantity: parseInt(e.target.value) || 0 })}
-                                  className="w-20 p-1 border rounded text-right tabular-nums"
-                                />
-                              ) : (
-                                log.loss_quantity
-                              )}
-                            </td>
-                            <td className="p-2">
-                              {isEditing ? (
-                                <input
-                                  type="text"
-                                  value={editFormData.note}
-                                  onChange={(e) => setEditFormData({ ...editFormData, note: e.target.value })}
-                                  className="w-full p-1 border rounded"
-                                />
-                              ) : (
-                                log.note || '-'
-                              )}
-                            </td>
-                            <td className="p-2">
-                              {isEditing ? (
-                                <div className="flex gap-1 justify-center">
-                                  <button
-                                    onClick={() => saveEditLog(log.log_id)}
-                                    className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700"
-                                  >
-                                    保存
-                                  </button>
-                                  <button
-                                    onClick={cancelEditLog}
-                                    className="bg-gray-400 text-white px-2 py-1 rounded text-xs hover:bg-gray-500"
-                                  >
-                                    キャンセル
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="flex gap-1 justify-center">
-                                  <button
-                                    onClick={() => startEditLog(log)}
-                                    className="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700"
-                                  >
-                                    編集
-                                  </button>
-                                  <button
-                                    onClick={() => deleteLog(log.log_id)}
-                                    className="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700"
-                                  >
-                                    削除
-                                  </button>
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                          return (
+                            <tr key={log.log_id} className="border-b hover:bg-gray-50">
+                              <td className="p-2">
+                                {new Date(log.created_at).toLocaleDateString('ja-JP', {
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </td>
+                              <td className="p-2">{worker?.name || '不明'}</td>
+                              <td className="p-2 text-right tabular-nums">
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={editFormData.quantity}
+                                    onChange={(e) =>
+                                      setEditFormData({
+                                        ...editFormData,
+                                        quantity: parseInt(e.target.value) || 0,
+                                      })
+                                    }
+                                    className="w-20 p-1 border rounded text-right tabular-nums"
+                                  />
+                                ) : (
+                                  log.quantity
+                                )}
+                              </td>
+                              <td className="p-2 text-right tabular-nums">
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={editFormData.loss_quantity}
+                                    onChange={(e) =>
+                                      setEditFormData({
+                                        ...editFormData,
+                                        loss_quantity: parseInt(e.target.value) || 0,
+                                      })
+                                    }
+                                    className="w-20 p-1 border rounded text-right tabular-nums"
+                                  />
+                                ) : (
+                                  log.loss_quantity
+                                )}
+                              </td>
+                              <td className="p-2">
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={editFormData.note}
+                                    onChange={(e) =>
+                                      setEditFormData({ ...editFormData, note: e.target.value })
+                                    }
+                                    className="w-full p-1 border rounded"
+                                  />
+                                ) : (
+                                  log.note || '-'
+                                )}
+                              </td>
+                              <td className="p-2">
+                                {isEditing ? (
+                                  <div className="flex gap-1 justify-center">
+                                    <button
+                                      onClick={() => saveEditLog(log.log_id)}
+                                      className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700"
+                                    >
+                                      保存
+                                    </button>
+                                    <button
+                                      onClick={cancelEditLog}
+                                      className="bg-gray-400 text-white px-2 py-1 rounded text-xs hover:bg-gray-500"
+                                    >
+                                      キャンセル
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex gap-1 justify-center">
+                                    <button
+                                      onClick={() => startEditLog(log)}
+                                      className="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700"
+                                    >
+                                      編集
+                                    </button>
+                                    <button
+                                      onClick={() => deleteLog(log.log_id)}
+                                      className="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700"
+                                    >
+                                      削除
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
                 </div>
@@ -1388,7 +1590,6 @@ export default function InventoryPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

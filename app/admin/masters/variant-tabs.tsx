@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import type {
-  Part,
-  VariantAttribute,
-  VariantAttributeValue,
-} from '@/lib/types/database';
+import type { Part, VariantAttribute, VariantAttributeValue } from '@/lib/types/database';
 
 // Extended types for query results with joins
 interface VariantAttributeValueWithAttribute extends VariantAttributeValue {
@@ -61,19 +57,17 @@ export function VariantAttributesTab() {
             name,
             description: description || null,
             order_index: parseInt(orderIndex),
-            active
+            active,
           })
           .eq('attribute_id', editing.attribute_id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('variant_attributes')
-          .insert({
-            name,
-            description: description || null,
-            order_index: parseInt(orderIndex),
-            active
-          });
+        const { error } = await supabase.from('variant_attributes').insert({
+          name,
+          description: description || null,
+          order_index: parseInt(orderIndex),
+          active,
+        });
         if (error) throw error;
       }
 
@@ -135,9 +129,7 @@ export function VariantAttributesTab() {
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="font-medium mb-4">
-          {editing ? '編集' : '新規バリエーション属性'}
-        </h3>
+        <h3 className="font-medium mb-4">{editing ? '編集' : '新規バリエーション属性'}</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
@@ -230,7 +222,14 @@ export function VariantAttributesTab() {
                 <td className="px-4 py-3">{attribute.description || '—'}</td>
                 <td className="px-4 py-3">{attribute.order_index}</td>
                 <td className="px-4 py-3">
-                  <span className={'px-2 py-1 rounded text-xs ' + (attribute.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')}>
+                  <span
+                    className={
+                      'px-2 py-1 rounded text-xs ' +
+                      (attribute.active
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800')
+                    }
+                  >
                     {attribute.active ? '有効' : '無効'}
                   </span>
                 </td>
@@ -268,7 +267,7 @@ export function VariantAttributeValuesTab() {
   }, []);
 
   const fetchAttributes = async () => {
-    const { data} = await supabase.from('variant_attributes').select('*').order('order_index');
+    const { data } = await supabase.from('variant_attributes').select('*').order('order_index');
     if (data) setAttributes(data);
   };
 
@@ -292,20 +291,18 @@ export function VariantAttributeValuesTab() {
             name,
             description: description || null,
             order_index: parseInt(orderIndex),
-            active
+            active,
           })
           .eq('value_id', editing.value_id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('variant_attribute_values')
-          .insert({
-            attribute_id: attributeId,
-            name,
-            description: description || null,
-            order_index: parseInt(orderIndex),
-            active
-          });
+        const { error } = await supabase.from('variant_attribute_values').insert({
+          attribute_id: attributeId,
+          name,
+          description: description || null,
+          order_index: parseInt(orderIndex),
+          active,
+        });
         if (error) throw error;
       }
 
@@ -374,9 +371,7 @@ export function VariantAttributeValuesTab() {
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="font-medium mb-4">
-          {editing ? '編集' : '新規属性値'}
-        </h3>
+        <h3 className="font-medium mb-4">{editing ? '編集' : '新規属性値'}</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
@@ -482,12 +477,19 @@ export function VariantAttributeValuesTab() {
           <tbody className="divide-y">
             {values.map((value) => (
               <tr key={value.value_id}>
-                <td className="px-4 py-3 font-medium">{value.variant_attributes?.name || getAttributeName(value.attribute_id)}</td>
+                <td className="px-4 py-3 font-medium">
+                  {value.variant_attributes?.name || getAttributeName(value.attribute_id)}
+                </td>
                 <td className="px-4 py-3">{value.name}</td>
                 <td className="px-4 py-3">{value.description || '—'}</td>
                 <td className="px-4 py-3">{value.order_index}</td>
                 <td className="px-4 py-3">
-                  <span className={'px-2 py-1 rounded text-xs ' + (value.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')}>
+                  <span
+                    className={
+                      'px-2 py-1 rounded text-xs ' +
+                      (value.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')
+                    }
+                  >
                     {value.active ? '有効' : '無効'}
                   </span>
                 </td>
@@ -541,7 +543,10 @@ export function ProductVariantsV2Tab() {
   };
 
   const fetchAttributeValues = async () => {
-    const { data } = await supabase.from('variant_attribute_values').select('*').order('order_index');
+    const { data } = await supabase
+      .from('variant_attribute_values')
+      .select('*')
+      .order('order_index');
     if (data) setAttributeValues(data);
   };
 
@@ -562,7 +567,7 @@ export function ProductVariantsV2Tab() {
 
           return {
             ...variant,
-            attributes: assignments || []
+            attributes: assignments || [],
           };
         })
       );
@@ -584,7 +589,7 @@ export function ProductVariantsV2Tab() {
             display_name: displayName,
             description: description || null,
             order_index: parseInt(orderIndex),
-            active
+            active,
           })
           .eq('variant_id', editing.variant_id);
         if (variantError) throw variantError;
@@ -598,9 +603,9 @@ export function ProductVariantsV2Tab() {
 
         // 新しい属性値を割り当て
         if (selectedValueIds.length > 0) {
-          const assignments = selectedValueIds.map(valueId => ({
+          const assignments = selectedValueIds.map((valueId) => ({
             variant_id: editing.variant_id,
-            value_id: valueId
+            value_id: valueId,
           }));
           const { error: assignError } = await supabase
             .from('variant_attribute_assignments')
@@ -617,7 +622,7 @@ export function ProductVariantsV2Tab() {
             display_name: displayName,
             description: description || null,
             order_index: parseInt(orderIndex),
-            active
+            active,
           })
           .select()
           .single();
@@ -625,9 +630,9 @@ export function ProductVariantsV2Tab() {
 
         // 属性値を割り当て
         if (selectedValueIds.length > 0 && variantData) {
-          const assignments = selectedValueIds.map(valueId => ({
+          const assignments = selectedValueIds.map((valueId) => ({
             variant_id: variantData.variant_id,
-            value_id: valueId
+            value_id: valueId,
           }));
           const { error: assignError } = await supabase
             .from('variant_attribute_assignments')
@@ -707,10 +712,8 @@ export function ProductVariantsV2Tab() {
   };
 
   const toggleValueSelection = (valueId: string) => {
-    setSelectedValueIds(prev =>
-      prev.includes(valueId)
-        ? prev.filter(id => id !== valueId)
-        : [...prev, valueId]
+    setSelectedValueIds((prev) =>
+      prev.includes(valueId) ? prev.filter((id) => id !== valueId) : [...prev, valueId]
     );
   };
 
@@ -722,14 +725,13 @@ export function ProductVariantsV2Tab() {
     <div className="space-y-6">
       <div className="bg-blue-50 p-4 rounded-lg">
         <p className="text-sm text-blue-800">
-          商品バリエーションは、属性値の組み合わせで定義されます（例: 通常版-花柄、島村版-無地（黒））。
+          商品バリエーションは、属性値の組み合わせで定義されます（例:
+          通常版-花柄、島村版-無地（黒））。
         </p>
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="font-medium mb-4">
-          {editing ? '編集' : '新規商品バリエーション'}
-        </h3>
+        <h3 className="font-medium mb-4">{editing ? '編集' : '新規商品バリエーション'}</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
@@ -880,7 +882,9 @@ export function ProductVariantsV2Tab() {
               <tr key={variant.variant_id}>
                 <td className="px-4 py-3">{variant.variant_code}</td>
                 <td className="px-4 py-3">{variant.display_name}</td>
-                <td className="px-4 py-3">{variant.parts?.name || getPartName(variant.base_part_id)}</td>
+                <td className="px-4 py-3">
+                  {variant.parts?.name || getPartName(variant.base_part_id)}
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {variant.attributes.map((assignment) => (
@@ -888,7 +892,8 @@ export function ProductVariantsV2Tab() {
                         key={assignment.value_id}
                         className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
                       >
-                        {assignment.variant_attribute_values?.variant_attributes?.name}: {assignment.variant_attribute_values?.name}
+                        {assignment.variant_attribute_values?.variant_attributes?.name}:{' '}
+                        {assignment.variant_attribute_values?.name}
                       </span>
                     ))}
                   </div>
@@ -896,7 +901,12 @@ export function ProductVariantsV2Tab() {
                 <td className="px-4 py-3">{variant.description || '—'}</td>
                 <td className="px-4 py-3">{variant.order_index}</td>
                 <td className="px-4 py-3">
-                  <span className={'px-2 py-1 rounded text-xs ' + (variant.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')}>
+                  <span
+                    className={
+                      'px-2 py-1 rounded text-xs ' +
+                      (variant.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')
+                    }
+                  >
                     {variant.active ? '有効' : '無効'}
                   </span>
                 </td>

@@ -2,13 +2,13 @@
 
 // 部品名と色のマッピング（Notionスタイルのパステルカラー）
 const PART_COLOR_MAP: Record<string, { bg: string; text: string }> = {
-  '胴': { bg: '#E8E5F9', text: '#5E4DB2' },      // 薄紫背景、濃い紫文字
-  '棹': { bg: '#D4F4DD', text: '#2B7A3E' },      // 薄緑背景、濃い緑文字
-  '皮': { bg: '#FFF4CC', text: '#9A6B00' },      // 薄黄背景、濃い黄文字
-  '駒': { bg: '#FFE5E5', text: '#C92A2A' },      // 薄赤背景、濃い赤文字
-  '糸': { bg: '#EDE3FF', text: '#6741D9' },      // 薄紫背景、濃い紫文字
-  '糸巻': { bg: '#FFE0F0', text: '#C2255C' },    // 薄ピンク背景、濃いピンク文字
-  'その他': { bg: '#D9F5F2', text: '#0D7C66' },  // 薄青緑背景、濃い青緑文字
+  胴: { bg: '#E8E5F9', text: '#5E4DB2' }, // 薄紫背景、濃い紫文字
+  棹: { bg: '#D4F4DD', text: '#2B7A3E' }, // 薄緑背景、濃い緑文字
+  皮: { bg: '#FFF4CC', text: '#9A6B00' }, // 薄黄背景、濃い黄文字
+  駒: { bg: '#FFE5E5', text: '#C92A2A' }, // 薄赤背景、濃い赤文字
+  糸: { bg: '#EDE3FF', text: '#6741D9' }, // 薄紫背景、濃い紫文字
+  糸巻: { bg: '#FFE0F0', text: '#C2255C' }, // 薄ピンク背景、濃いピンク文字
+  その他: { bg: '#D9F5F2', text: '#0D7C66' }, // 薄青緑背景、濃い青緑文字
 };
 
 // デフォルトの色リスト（マッピングにない部品用）
@@ -53,7 +53,9 @@ export function getPartColor(partId: string): { bg: string; text: string } {
 }
 
 // 部品のリストから色マップを作成
-export function createPartColorMap(parts: Array<{ part_id: string; name: string }>): Map<string, { bg: string; text: string }> {
+export function createPartColorMap(
+  parts: Array<{ part_id: string; name: string }>
+): Map<string, { bg: string; text: string }> {
   const colorMap = new Map<string, { bg: string; text: string }>();
   parts.forEach((part) => {
     const color = getPartColorByName(part.name);

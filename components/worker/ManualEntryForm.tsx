@@ -1,50 +1,58 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase/client'
-import type { Part, Operation, VariantAttribute, VariantAttributeValue, Worker } from '@/lib/types/database'
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { createClient } from '@/lib/supabase/client';
+import type {
+  Part,
+  Operation,
+  VariantAttribute,
+  VariantAttributeValue,
+  Worker,
+} from '@/lib/types/database';
 
 interface ManualEntryFormProps {
-  workerId?: string
+  workerId?: string;
   onSubmit: (params: {
-    workerId: string
-    partId: string
-    operationId: string
-    durationMinutes: number
+    workerId: string;
+    partId: string;
+    operationId: string;
+    durationMinutes: number;
     items: Array<{
-      attributeValueIds: string[]
-      quantity: number
-      lossQuantity: number
-    }>
-    note: string
-  }) => Promise<void>
-  loading: boolean
+      attributeValueIds: string[];
+      quantity: number;
+      lossQuantity: number;
+    }>;
+    note: string;
+  }) => Promise<void>;
+  loading: boolean;
 }
 
 interface WorkItem {
-  id: string
-  attributeValueIds: Record<string, string>
-  quantity: string
-  lossQuantity: string
+  id: string;
+  attributeValueIds: Record<string, string>;
+  quantity: string;
+  lossQuantity: string;
 }
 
 export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryFormProps) {
-  const supabase = createClient()
+  const supabase = createClient();
 
-  const [workers, setWorkers] = useState<Worker[]>([])
-  const [parts, setParts] = useState<Part[]>([])
-  const [operations, setOperations] = useState<Operation[]>([])
-  const [attributes, setAttributes] = useState<VariantAttribute[]>([])
-  const [attributeValues, setAttributeValues] = useState<Record<string, VariantAttributeValue[]>>({})
+  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [parts, setParts] = useState<Part[]>([]);
+  const [operations, setOperations] = useState<Operation[]>([]);
+  const [attributes, setAttributes] = useState<VariantAttribute[]>([]);
+  const [attributeValues, setAttributeValues] = useState<Record<string, VariantAttributeValue[]>>(
+    {}
+  );
 
-  const [selectedWorkerId, setSelectedWorkerId] = useState(workerId || '')
-  const [selectedPartId, setSelectedPartId] = useState('')
-  const [selectedOperationId, setSelectedOperationId] = useState('')
+  const [selectedWorkerId, setSelectedWorkerId] = useState(workerId || '');
+  const [selectedPartId, setSelectedPartId] = useState('');
+  const [selectedOperationId, setSelectedOperationId] = useState('');
 
-  const [hours, setHours] = useState('0')
-  const [minutes, setMinutes] = useState('0')
-  const [note, setNote] = useState('')
+  const [hours, setHours] = useState('0');
+  const [minutes, setMinutes] = useState('0');
+  const [note, setNote] = useState('');
 
   const [items, setItems] = useState<WorkItem[]>([
     {
@@ -53,28 +61,28 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
       quantity: '',
       lossQuantity: '0',
     },
-  ])
+  ]);
 
   useEffect(() => {
-    fetchWorkers()
-    fetchParts()
-  }, [])
+    fetchWorkers();
+    fetchParts();
+  }, []);
 
   useEffect(() => {
     if (selectedPartId) {
-      fetchOperations(selectedPartId)
+      fetchOperations(selectedPartId);
     } else {
-      setOperations([])
-      setSelectedOperationId('')
+      setOperations([]);
+      setSelectedOperationId('');
     }
-  }, [selectedPartId])
+  }, [selectedPartId]);
 
   useEffect(() => {
     if (selectedOperationId) {
-      fetchAttributesAndValues(selectedOperationId)
+      fetchAttributesAndValues(selectedOperationId);
     } else {
-      setAttributes([])
-      setAttributeValues({})
+      setAttributes([]);
+      setAttributeValues({});
       // 種類をリセット
       setItems([
         {
@@ -83,35 +91,35 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
           quantity: '',
           lossQuantity: '0',
         },
-      ])
+      ]);
     }
-  }, [selectedOperationId])
+  }, [selectedOperationId]);
 
   const fetchWorkers = async () => {
     const { data, error } = await supabase
       .from('workers')
       .select('*')
       .eq('active', true)
-      .order('order_index')
+      .order('order_index');
     if (error) {
-      console.error('作業者取得エラー:', error)
-      toast.error(`作業者の取得に失敗しました: ${error.message}`)
+      console.error('作業者取得エラー:', error);
+      toast.error(`作業者の取得に失敗しました: ${error.message}`);
     }
-    if (data) setWorkers(data)
-  }
+    if (data) setWorkers(data);
+  };
 
   const fetchParts = async () => {
     const { data, error } = await supabase
       .from('parts')
       .select('*')
       .eq('active', true)
-      .order('order_index')
+      .order('order_index');
     if (error) {
-      console.error('部品取得エラー:', error)
-      toast.error(`部品の取得に失敗しました: ${error.message}`)
+      console.error('部品取得エラー:', error);
+      toast.error(`部品の取得に失敗しました: ${error.message}`);
     }
-    if (data) setParts(data)
-  }
+    if (data) setParts(data);
+  };
 
   const fetchOperations = async (partId: string) => {
     const { data, error } = await supabase
@@ -119,54 +127,54 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
       .select('*')
       .eq('part_id', partId)
       .eq('active', true)
-      .order('order_index')
+      .order('order_index');
     if (error) {
-      console.error('工程取得エラー:', error)
-      toast.error(`工程の取得に失敗しました: ${error.message}`)
+      console.error('工程取得エラー:', error);
+      toast.error(`工程の取得に失敗しました: ${error.message}`);
     }
-    if (data) setOperations(data)
-  }
+    if (data) setOperations(data);
+  };
 
   const fetchAttributesAndValues = async (operationId: string) => {
     const { data: operationAttrs } = await supabase
       .from('operation_variant_attributes')
       .select('attribute_id')
-      .eq('operation_id', operationId)
+      .eq('operation_id', operationId);
 
     if (!operationAttrs || operationAttrs.length === 0) {
-      setAttributes([])
-      setAttributeValues({})
-      return
+      setAttributes([]);
+      setAttributeValues({});
+      return;
     }
 
-    const attributeIds = operationAttrs.map(a => a.attribute_id)
+    const attributeIds = operationAttrs.map((a) => a.attribute_id);
 
     const { data: attrs } = await supabase
       .from('variant_attributes')
       .select('*')
       .in('attribute_id', attributeIds)
       .eq('active', true)
-      .order('order_index')
+      .order('order_index');
 
     if (attrs) {
-      setAttributes(attrs)
+      setAttributes(attrs);
 
-      const valuesMap: Record<string, VariantAttributeValue[]> = {}
+      const valuesMap: Record<string, VariantAttributeValue[]> = {};
       for (const attr of attrs) {
         const { data: values } = await supabase
           .from('variant_attribute_values')
           .select('*')
           .eq('attribute_id', attr.attribute_id)
           .eq('active', true)
-          .order('order_index')
+          .order('order_index');
 
         if (values) {
-          valuesMap[attr.attribute_id] = values
+          valuesMap[attr.attribute_id] = values;
         }
       }
-      setAttributeValues(valuesMap)
+      setAttributeValues(valuesMap);
     }
-  }
+  };
 
   const addItem = () => {
     setItems([
@@ -177,24 +185,24 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
         quantity: '',
         lossQuantity: '0',
       },
-    ])
-  }
+    ]);
+  };
 
   const removeItem = (id: string) => {
     if (items.length === 1) {
-      toast.error('最低1つの種類が必要です')
-      return
+      toast.error('最低1つの種類が必要です');
+      return;
     }
-    setItems(items.filter(item => item.id !== id))
-  }
+    setItems(items.filter((item) => item.id !== id));
+  };
 
   const updateItem = (id: string, field: keyof WorkItem, value: any) => {
-    setItems(items.map(item => (item.id === id ? { ...item, [field]: value } : item)))
-  }
+    setItems(items.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
+  };
 
   const updateItemAttribute = (itemId: string, attributeId: string, valueId: string) => {
     setItems(
-      items.map(item =>
+      items.map((item) =>
         item.id === itemId
           ? {
               ...item,
@@ -205,64 +213,64 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
             }
           : item
       )
-    )
-  }
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!selectedWorkerId) {
-      toast.error('作業者を選択してください')
-      return
+      toast.error('作業者を選択してください');
+      return;
     }
 
     if (!selectedPartId || !selectedOperationId) {
-      toast.error('部品と工程を選択してください')
-      return
+      toast.error('部品と工程を選択してください');
+      return;
     }
 
-    const parsedHours = parseInt(hours) || 0
-    const parsedMinutes = parseInt(minutes) || 0
-    const durationMinutes = parsedHours * 60 + parsedMinutes
+    const parsedHours = parseInt(hours) || 0;
+    const parsedMinutes = parseInt(minutes) || 0;
+    const durationMinutes = parsedHours * 60 + parsedMinutes;
     if (isNaN(durationMinutes) || durationMinutes <= 0) {
-      toast.error('作業時間を正しく入力してください（時間または分に有効な値を入力）')
-      return
+      toast.error('作業時間を正しく入力してください（時間または分に有効な値を入力）');
+      return;
     }
 
     // バリデーション
     for (let i = 0; i < items.length; i++) {
-      const item = items[i]
+      const item = items[i];
 
       // 属性値チェック
-      const missingAttrs = attributes.filter(attr => !item.attributeValueIds[attr.attribute_id])
+      const missingAttrs = attributes.filter((attr) => !item.attributeValueIds[attr.attribute_id]);
       if (missingAttrs.length > 0) {
         toast.error(
-          `種類${i + 1}: 以下の属性を選択してください: ${missingAttrs.map(a => a.name).join(', ')}`
-        )
-        return
+          `種類${i + 1}: 以下の属性を選択してください: ${missingAttrs.map((a) => a.name).join(', ')}`
+        );
+        return;
       }
 
       // 数量チェック
-      const qty = parseInt(item.quantity)
+      const qty = parseInt(item.quantity);
       if (isNaN(qty) || qty <= 0) {
-        toast.error(`種類${i + 1}: 完成数量を正しく入力してください`)
-        return
+        toast.error(`種類${i + 1}: 完成数量を正しく入力してください`);
+        return;
       }
 
       // 不良数チェック
-      const lossQty = parseInt(item.lossQuantity)
+      const lossQty = parseInt(item.lossQuantity);
       if (isNaN(lossQty) || lossQty < 0) {
-        toast.error(`種類${i + 1}: 不良数を正しく入力してください`)
-        return
+        toast.error(`種類${i + 1}: 不良数を正しく入力してください`);
+        return;
       }
     }
 
     // 送信データを作成
-    const submitItems = items.map(item => ({
+    const submitItems = items.map((item) => ({
       attributeValueIds: Object.values(item.attributeValueIds),
       quantity: parseInt(item.quantity),
       lossQuantity: parseInt(item.lossQuantity),
-    }))
+    }));
 
     try {
       await onSubmit({
@@ -272,15 +280,15 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
         durationMinutes,
         items: submitItems,
         note: note.trim(),
-      })
+      });
 
       // 成功時のみフォームをリセット
-      setSelectedWorkerId(workerId || '')
-      setSelectedPartId('')
-      setSelectedOperationId('')
-      setHours('0')
-      setMinutes('0')
-      setNote('')
+      setSelectedWorkerId(workerId || '');
+      setSelectedPartId('');
+      setSelectedOperationId('');
+      setHours('0');
+      setMinutes('0');
+      setNote('');
       setItems([
         {
           id: crypto.randomUUID(),
@@ -288,12 +296,12 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
           quantity: '',
           lossQuantity: '0',
         },
-      ])
+      ]);
     } catch (error) {
       // エラー時はフォームをリセットしない（入力内容を保持）
-      console.error('手動登録エラー:', error)
+      console.error('手動登録エラー:', error);
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -393,9 +401,7 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
               <span className="text-xs text-gray-500 mt-1 block">分</span>
             </div>
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            ※ 各種類に数量比で按分されます
-          </p>
+          <p className="text-xs text-gray-500 mt-1">※ 各種類に数量比で按分されます</p>
         </div>
 
         {/* 複数種類の入力 */}
@@ -433,14 +439,14 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
                 </div>
 
                 {/* 属性選択 */}
-                {attributes.map(attribute => (
+                {attributes.map((attribute) => (
                   <div key={attribute.attribute_id}>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {attribute.name} <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={item.attributeValueIds[attribute.attribute_id] || ''}
-                      onChange={e =>
+                      onChange={(e) =>
                         updateItemAttribute(item.id, attribute.attribute_id, e.target.value)
                       }
                       required
@@ -448,7 +454,7 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
                       className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                     >
                       <option value="">選択してください</option>
-                      {attributeValues[attribute.attribute_id]?.map(value => (
+                      {attributeValues[attribute.attribute_id]?.map((value) => (
                         <option key={value.value_id} value={value.value_id}>
                           {value.name}
                         </option>
@@ -465,7 +471,7 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
                   <input
                     type="number"
                     value={item.quantity}
-                    onChange={e => updateItem(item.id, 'quantity', e.target.value)}
+                    onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
                     required
                     min="1"
                     disabled={loading}
@@ -480,7 +486,7 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
                   <input
                     type="number"
                     value={item.lossQuantity}
-                    onChange={e => updateItem(item.id, 'lossQuantity', e.target.value)}
+                    onChange={(e) => updateItem(item.id, 'lossQuantity', e.target.value)}
                     min="0"
                     disabled={loading}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
@@ -494,9 +500,7 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
 
         {/* メモ */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            メモ
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">メモ</label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -516,5 +520,5 @@ export function ManualEntryForm({ workerId, onSubmit, loading }: ManualEntryForm
         {loading ? '登録中...' : '作業を登録'}
       </button>
     </form>
-  )
+  );
 }

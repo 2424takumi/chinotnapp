@@ -11,7 +11,7 @@
  * - パスワード、トークン、メールアドレスなどを自動マスク
  */
 
-const isDevelopment = process.env.NODE_ENV === 'development'
+const isDevelopment = process.env.NODE_ENV === 'development';
 
 /**
  * 機密情報をマスクする
@@ -22,7 +22,7 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 function sanitize(data: any): any {
   // プリミティブ型の処理
   if (data === null || data === undefined) {
-    return data
+    return data;
   }
 
   // 文字列の処理
@@ -32,38 +32,38 @@ function sanitize(data: any): any {
       /([a-zA-Z0-9._-]+)@([a-zA-Z0-9._-]+\.[a-zA-Z]{2,})/g,
       (match, local, domain) => {
         if (local.length <= 2) {
-          return `**@${domain}`
+          return `**@${domain}`;
         }
-        return `${local.substring(0, 2)}***@${domain}`
+        return `${local.substring(0, 2)}***@${domain}`;
       }
-    )
+    );
 
     // 電話番号をマスク (例: 090-1234-5678 → 090-****-5678)
     sanitized = sanitized.replace(
       /(\d{2,4})-?(\d{4})-?(\d{4})/g,
       (match, p1, p2, p3) => `${p1}-****-${p3}`
-    )
+    );
 
     // クレジットカード番号をマスク (例: 1234-5678-9012-3456 → ****-****-****-3456)
     sanitized = sanitized.replace(
       /(\d{4})[\s-]?(\d{4})[\s-]?(\d{4})[\s-]?(\d{4})/g,
       (match, p1, p2, p3, p4) => `****-****-****-${p4}`
-    )
+    );
 
-    return sanitized
+    return sanitized;
   }
 
   // 配列の処理
   if (Array.isArray(data)) {
-    return data.map(item => sanitize(item))
+    return data.map((item) => sanitize(item));
   }
 
   // オブジェクトの処理
   if (typeof data === 'object') {
-    const sanitized: any = {}
+    const sanitized: any = {};
 
     for (const key in data) {
-      const lowerKey = key.toLowerCase()
+      const lowerKey = key.toLowerCase();
 
       // パスワード関連のキーは完全にマスク
       if (
@@ -71,8 +71,8 @@ function sanitize(data: any): any {
         lowerKey.includes('passwd') ||
         lowerKey.includes('pwd')
       ) {
-        sanitized[key] = '***REDACTED***'
-        continue
+        sanitized[key] = '***REDACTED***';
+        continue;
       }
 
       // トークン・シークレット関連のキーは完全にマスク
@@ -83,19 +83,19 @@ function sanitize(data: any): any {
         lowerKey.includes('api_key') ||
         lowerKey.includes('private')
       ) {
-        sanitized[key] = '***REDACTED***'
-        continue
+        sanitized[key] = '***REDACTED***';
+        continue;
       }
 
       // その他のフィールドは再帰的にサニタイズ
-      sanitized[key] = sanitize(data[key])
+      sanitized[key] = sanitize(data[key]);
     }
 
-    return sanitized
+    return sanitized;
   }
 
   // その他の型（number, boolean など）はそのまま返す
-  return data
+  return data;
 }
 
 /**
@@ -111,12 +111,12 @@ function simplifyError(error: any): any {
       name: error.name,
       code: (error as any).code,
       // 本番環境ではスタックトレースを含めない
-      ...(isDevelopment && { stack: error.stack })
-    }
+      ...(isDevelopment && { stack: error.stack }),
+    };
   }
 
   // Error インスタンスでない場合はサニタイズして返す
-  return sanitize(error)
+  return sanitize(error);
 }
 
 export const logger = {
@@ -129,9 +129,9 @@ export const logger = {
   debug: (message: string, data?: any) => {
     if (isDevelopment) {
       if (data !== undefined) {
-        console.log(`[DEBUG] ${message}`, data)
+        console.log(`[DEBUG] ${message}`, data);
       } else {
-        console.log(`[DEBUG] ${message}`)
+        console.log(`[DEBUG] ${message}`);
       }
     }
   },
@@ -146,13 +146,13 @@ export const logger = {
     if (isDevelopment) {
       // 開発環境では詳細を出力
       if (data !== undefined) {
-        console.info(`[INFO] ${message}`, data)
+        console.info(`[INFO] ${message}`, data);
       } else {
-        console.info(`[INFO] ${message}`)
+        console.info(`[INFO] ${message}`);
       }
     } else {
       // 本番環境では簡略化（データは含めない）
-      console.info(`[INFO] ${message}`)
+      console.info(`[INFO] ${message}`);
     }
   },
 
@@ -166,16 +166,16 @@ export const logger = {
     if (isDevelopment) {
       // 開発環境では詳細を出力
       if (data !== undefined) {
-        console.warn(`[WARN] ${message}`, data)
+        console.warn(`[WARN] ${message}`, data);
       } else {
-        console.warn(`[WARN] ${message}`)
+        console.warn(`[WARN] ${message}`);
       }
     } else {
       // 本番環境では機密情報をマスク
       if (data !== undefined) {
-        console.warn(`[WARN] ${message}`, sanitize(data))
+        console.warn(`[WARN] ${message}`, sanitize(data));
       } else {
-        console.warn(`[WARN] ${message}`)
+        console.warn(`[WARN] ${message}`);
       }
     }
   },
@@ -190,23 +190,23 @@ export const logger = {
     if (isDevelopment) {
       // 開発環境では詳細を出力（スタックトレース含む）
       if (error !== undefined) {
-        console.error(`[ERROR] ${message}`, error)
+        console.error(`[ERROR] ${message}`, error);
         if (error?.stack) {
-          console.error('Stack trace:', error.stack)
+          console.error('Stack trace:', error.stack);
         }
       } else {
-        console.error(`[ERROR] ${message}`)
+        console.error(`[ERROR] ${message}`);
       }
     } else {
       // 本番環境ではエラーを簡略化
       if (error !== undefined) {
-        const simplifiedError = simplifyError(error)
-        console.error(`[ERROR] ${message}`, simplifiedError)
+        const simplifiedError = simplifyError(error);
+        console.error(`[ERROR] ${message}`, simplifiedError);
       } else {
-        console.error(`[ERROR] ${message}`)
+        console.error(`[ERROR] ${message}`);
       }
     }
-  }
-}
+  },
+};
 
-export default logger
+export default logger;

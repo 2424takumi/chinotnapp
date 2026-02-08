@@ -1,36 +1,33 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase/client'
-import type { ActiveSessionData } from '@/lib/services/sessionService'
-import type { VariantAttribute, VariantAttributeValue } from '@/lib/types/database'
-import type { SessionStopItem } from '@/lib/services/sessionService'
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { createClient } from '@/lib/supabase/client';
+import type { ActiveSessionData } from '@/lib/services/sessionService';
+import type { VariantAttribute, VariantAttributeValue } from '@/lib/types/database';
+import type { SessionStopItem } from '@/lib/services/sessionService';
 
 interface SessionStopFormProps {
-  sessionData: ActiveSessionData
-  onStop: (params: { items: SessionStopItem[]; note?: string }) => Promise<void>
-  onAbandon: () => Promise<void>
-  loading: boolean
+  sessionData: ActiveSessionData;
+  onStop: (params: { items: SessionStopItem[]; note?: string }) => Promise<void>;
+  onAbandon: () => Promise<void>;
+  loading: boolean;
 }
 
 interface WorkItem {
-  id: string // ユニークID（フロントエンド用）
-  attributeValueIds: Record<string, string> // attribute_id -> value_id
-  quantity: string
-  lossQuantity: string
+  id: string; // ユニークID（フロントエンド用）
+  attributeValueIds: Record<string, string>; // attribute_id -> value_id
+  quantity: string;
+  lossQuantity: string;
 }
 
-export function SessionStopForm({
-  sessionData,
-  onStop,
-  onAbandon,
-  loading,
-}: SessionStopFormProps) {
-  const supabase = createClient()
+export function SessionStopForm({ sessionData, onStop, onAbandon, loading }: SessionStopFormProps) {
+  const supabase = createClient();
 
-  const [attributes, setAttributes] = useState<VariantAttribute[]>([])
-  const [attributeValues, setAttributeValues] = useState<Record<string, VariantAttributeValue[]>>({})
+  const [attributes, setAttributes] = useState<VariantAttribute[]>([]);
+  const [attributeValues, setAttributeValues] = useState<Record<string, VariantAttributeValue[]>>(
+    {}
+  );
   const [items, setItems] = useState<WorkItem[]>([
     {
       id: crypto.randomUUID(),
@@ -38,93 +35,93 @@ export function SessionStopForm({
       quantity: '',
       lossQuantity: '0',
     },
-  ])
-  const [note, setNote] = useState('')
-  const [elapsedTime, setElapsedTime] = useState(sessionData.elapsedSeconds)
+  ]);
+  const [note, setNote] = useState('');
+  const [elapsedTime, setElapsedTime] = useState(sessionData.elapsedSeconds);
 
   // 工程に紐づく属性を取得
   useEffect(() => {
-    fetchAttributesAndValues()
-  }, [])
+    fetchAttributesAndValues();
+  }, []);
 
   const fetchAttributesAndValues = async () => {
     const { data: operationAttrs } = await supabase
       .from('operation_variant_attributes')
       .select('attribute_id')
-      .eq('operation_id', sessionData.session.operation_id)
+      .eq('operation_id', sessionData.session.operation_id);
 
     if (!operationAttrs || operationAttrs.length === 0) {
-      setAttributes([])
-      setAttributeValues({})
-      return
+      setAttributes([]);
+      setAttributeValues({});
+      return;
     }
 
-    const attributeIds = operationAttrs.map(a => a.attribute_id)
+    const attributeIds = operationAttrs.map((a) => a.attribute_id);
 
     const { data: attrs } = await supabase
       .from('variant_attributes')
       .select('*')
       .in('attribute_id', attributeIds)
       .eq('active', true)
-      .order('order_index')
+      .order('order_index');
 
     if (attrs) {
-      setAttributes(attrs)
+      setAttributes(attrs);
 
-      const valuesMap: Record<string, VariantAttributeValue[]> = {}
+      const valuesMap: Record<string, VariantAttributeValue[]> = {};
       for (const attr of attrs) {
         const { data: values } = await supabase
           .from('variant_attribute_values')
           .select('*')
           .eq('attribute_id', attr.attribute_id)
           .eq('active', true)
-          .order('order_index')
+          .order('order_index');
 
         if (values) {
-          valuesMap[attr.attribute_id] = values
+          valuesMap[attr.attribute_id] = values;
         }
       }
-      setAttributeValues(valuesMap)
+      setAttributeValues(valuesMap);
     }
-  }
+  };
 
   // セッション開始時刻を取得
-  const startTime = new Date(sessionData.session.start_time)
+  const startTime = new Date(sessionData.session.start_time);
 
   // 経過時間を再計算する関数
   const calculateElapsedTime = () => {
-    const now = new Date()
-    const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000)
-    setElapsedTime(elapsed)
-  }
+    const now = new Date();
+    const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+    setElapsedTime(elapsed);
+  };
 
   // タイマー更新（開始時刻から毎秒再計算）
   useEffect(() => {
-    calculateElapsedTime()
+    calculateElapsedTime();
 
     const interval = setInterval(() => {
-      calculateElapsedTime()
-    }, 1000)
+      calculateElapsedTime();
+    }, 1000);
 
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        calculateElapsedTime()
+        calculateElapsedTime();
       }
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      clearInterval(interval)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [])
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const secs = seconds % 60
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-  }
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const addItem = () => {
     setItems([
@@ -135,24 +132,24 @@ export function SessionStopForm({
         quantity: '',
         lossQuantity: '0',
       },
-    ])
-  }
+    ]);
+  };
 
   const removeItem = (id: string) => {
     if (items.length === 1) {
-      toast.error('最低1つの種類が必要です')
-      return
+      toast.error('最低1つの種類が必要です');
+      return;
     }
-    setItems(items.filter(item => item.id !== id))
-  }
+    setItems(items.filter((item) => item.id !== id));
+  };
 
   const updateItem = (id: string, field: keyof WorkItem, value: any) => {
-    setItems(items.map(item => (item.id === id ? { ...item, [field]: value } : item)))
-  }
+    setItems(items.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
+  };
 
   const updateItemAttribute = (itemId: string, attributeId: string, valueId: string) => {
     setItems(
-      items.map(item =>
+      items.map((item) =>
         item.id === itemId
           ? {
               ...item,
@@ -163,60 +160,60 @@ export function SessionStopForm({
             }
           : item
       )
-    )
-  }
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     // バリデーション
     for (let i = 0; i < items.length; i++) {
-      const item = items[i]
+      const item = items[i];
 
       // 属性値チェック
-      const missingAttrs = attributes.filter(attr => !item.attributeValueIds[attr.attribute_id])
+      const missingAttrs = attributes.filter((attr) => !item.attributeValueIds[attr.attribute_id]);
       if (missingAttrs.length > 0) {
         toast.error(
-          `種類${i + 1}: 以下の属性を選択してください: ${missingAttrs.map(a => a.name).join(', ')}`
-        )
-        return
+          `種類${i + 1}: 以下の属性を選択してください: ${missingAttrs.map((a) => a.name).join(', ')}`
+        );
+        return;
       }
 
       // 数量チェック
-      const qty = parseInt(item.quantity)
+      const qty = parseInt(item.quantity);
       if (isNaN(qty) || qty <= 0) {
-        toast.error(`種類${i + 1}: 完成数量を正しく入力してください`)
-        return
+        toast.error(`種類${i + 1}: 完成数量を正しく入力してください`);
+        return;
       }
 
       // 不良数チェック
-      const lossQty = parseInt(item.lossQuantity)
+      const lossQty = parseInt(item.lossQuantity);
       if (isNaN(lossQty) || lossQty < 0) {
-        toast.error(`種類${i + 1}: 不良数を正しく入力してください`)
-        return
+        toast.error(`種類${i + 1}: 不良数を正しく入力してください`);
+        return;
       }
     }
 
     // SessionStopItem形式に変換
-    const stopItems: SessionStopItem[] = items.map(item => ({
+    const stopItems: SessionStopItem[] = items.map((item) => ({
       attributeValueIds: Object.values(item.attributeValueIds),
       quantity: parseInt(item.quantity),
       lossQuantity: parseInt(item.lossQuantity),
-    }))
+    }));
 
     await onStop({
       items: stopItems,
       note: note.trim() || undefined,
-    })
-  }
+    });
+  };
 
   const handleAbandon = async () => {
     if (!confirm('この作業をキャンセルしますか？記録は保存されません。')) {
-      return
+      return;
     }
 
-    await onAbandon()
-  }
+    await onAbandon();
+  };
 
   return (
     <div className="space-y-6">
@@ -258,10 +255,7 @@ export function SessionStopForm({
           </div>
 
           {items.map((item, index) => (
-            <div
-              key={item.id}
-              className="border border-gray-300 rounded-lg p-4 space-y-4 bg-white"
-            >
+            <div key={item.id} className="border border-gray-300 rounded-lg p-4 space-y-4 bg-white">
               <div className="flex justify-between items-center">
                 <h4 className="font-medium text-gray-900">種類 {index + 1}</h4>
                 {items.length > 1 && (
@@ -277,14 +271,14 @@ export function SessionStopForm({
               </div>
 
               {/* 属性選択 */}
-              {attributes.map(attribute => (
+              {attributes.map((attribute) => (
                 <div key={attribute.attribute_id}>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {attribute.name} <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={item.attributeValueIds[attribute.attribute_id] || ''}
-                    onChange={e =>
+                    onChange={(e) =>
                       updateItemAttribute(item.id, attribute.attribute_id, e.target.value)
                     }
                     required
@@ -292,7 +286,7 @@ export function SessionStopForm({
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                   >
                     <option value="">選択してください</option>
-                    {attributeValues[attribute.attribute_id]?.map(value => (
+                    {attributeValues[attribute.attribute_id]?.map((value) => (
                       <option key={value.value_id} value={value.value_id}>
                         {value.name}
                       </option>
@@ -309,7 +303,7 @@ export function SessionStopForm({
                 <input
                   type="number"
                   value={item.quantity}
-                  onChange={e => updateItem(item.id, 'quantity', e.target.value)}
+                  onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
                   required
                   min="1"
                   disabled={loading}
@@ -324,7 +318,7 @@ export function SessionStopForm({
                 <input
                   type="number"
                   value={item.lossQuantity}
-                  onChange={e => updateItem(item.id, 'lossQuantity', e.target.value)}
+                  onChange={(e) => updateItem(item.id, 'lossQuantity', e.target.value)}
                   min="0"
                   disabled={loading}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 tabular-nums"
@@ -340,7 +334,7 @@ export function SessionStopForm({
           <label className="block text-sm font-medium text-gray-700 mb-2">メモ（全体共通）</label>
           <textarea
             value={note}
-            onChange={e => setNote(e.target.value)}
+            onChange={(e) => setNote(e.target.value)}
             disabled={loading}
             rows={3}
             className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
@@ -368,5 +362,5 @@ export function SessionStopForm({
         </div>
       </form>
     </div>
-  )
+  );
 }

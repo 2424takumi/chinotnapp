@@ -4,7 +4,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import type { Order, OrderItem, ProductVariantV2, Customer } from '@/lib/types/database';
-import { consumeInventoryForOrder, restoreInventoryForOrder } from '@/lib/services/orderInventoryService';
+import {
+  consumeInventoryForOrder,
+  restoreInventoryForOrder,
+} from '@/lib/services/orderInventoryService';
 
 interface OrderWithDetails extends Order {
   order_items: (OrderItem & {
@@ -61,13 +64,15 @@ export default function OrdersPage() {
   const fetchOrders = async () => {
     const { data } = await supabase
       .from('orders')
-      .select(`
+      .select(
+        `
         *,
         order_items(
           *,
           product_variants_v2(display_name)
         )
-      `)
+      `
+      )
       .order('order_date', { ascending: false });
     if (data) setOrders(data as OrderWithDetails[]);
   };
@@ -157,7 +162,11 @@ export default function OrdersPage() {
     setFormData({ ...formData, items: newItems });
   };
 
-  const handleItemChange = (index: number, field: keyof OrderFormData['items'][0], value: string | number) => {
+  const handleItemChange = (
+    index: number,
+    field: keyof OrderFormData['items'][0],
+    value: string | number
+  ) => {
     const newItems = [...formData.items];
     newItems[index] = { ...newItems[index], [field]: value };
 
@@ -208,10 +217,7 @@ export default function OrdersPage() {
         if (orderError) throw orderError;
 
         // 既存の明細を削除して再作成
-        await supabase
-          .from('order_items')
-          .delete()
-          .eq('order_id', editingOrder.order_id);
+        await supabase.from('order_items').delete().eq('order_id', editingOrder.order_id);
 
         const itemsToInsert = formData.items.map((item) => ({
           order_id: editingOrder.order_id,
@@ -221,9 +227,7 @@ export default function OrdersPage() {
           subtotal: item.quantity * item.unit_price,
         }));
 
-        const { error: itemsError } = await supabase
-          .from('order_items')
-          .insert(itemsToInsert);
+        const { error: itemsError } = await supabase.from('order_items').insert(itemsToInsert);
 
         if (itemsError) throw itemsError;
       } else {
@@ -260,9 +264,7 @@ export default function OrdersPage() {
           subtotal: item.quantity * item.unit_price,
         }));
 
-        const { error: itemsError } = await supabase
-          .from('order_items')
-          .insert(itemsToInsert);
+        const { error: itemsError } = await supabase.from('order_items').insert(itemsToInsert);
 
         if (itemsError) throw itemsError;
       }
@@ -314,10 +316,7 @@ export default function OrdersPage() {
         updateData.delivery_date = new Date().toISOString().split('T')[0];
       }
 
-      const { error } = await supabase
-        .from('orders')
-        .update(updateData)
-        .eq('order_id', orderId);
+      const { error } = await supabase.from('orders').update(updateData).eq('order_id', orderId);
 
       if (error) throw error;
       await fetchOrders();
@@ -336,17 +335,11 @@ export default function OrdersPage() {
       cancelled: { label: 'キャンセル', className: 'bg-gray-100 text-gray-800' },
     };
     const config = statusMap[status] || { label: status, className: 'bg-gray-100 text-gray-800' };
-    return (
-      <span className={`px-2 py-1 rounded text-xs ${config.className}`}>
-        {config.label}
-      </span>
-    );
+    return <span className={`px-2 py-1 rounded text-xs ${config.className}`}>{config.label}</span>;
   };
 
-  const filteredOrders = useMemo(() =>
-    filterStatus === 'all'
-      ? orders
-      : orders.filter((o) => o.status === filterStatus),
+  const filteredOrders = useMemo(
+    () => (filterStatus === 'all' ? orders : orders.filter((o) => o.status === filterStatus)),
     [orders, filterStatus]
   );
 
@@ -383,13 +376,27 @@ export default function OrdersPage() {
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">受注番号</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">顧客名</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">受注日</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">納期</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">合計金額</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ステータス</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">操作</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                受注番号
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                顧客名
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                受注日
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                納期
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                合計金額
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                ステータス
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                操作
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -399,7 +406,9 @@ export default function OrdersPage() {
                 <td className="px-4 py-3">{order.customer_name}</td>
                 <td className="px-4 py-3">{order.order_date}</td>
                 <td className="px-4 py-3">{order.delivery_deadline || '—'}</td>
-                <td className="px-4 py-3 tabular-nums">¥{order.total_amount?.toLocaleString() || 0}</td>
+                <td className="px-4 py-3 tabular-nums">
+                  ¥{order.total_amount?.toLocaleString() || 0}
+                </td>
                 <td className="px-4 py-3">{getStatusBadge(order.status)}</td>
                 <td className="px-4 py-3 text-center space-x-2">
                   <button
@@ -448,7 +457,9 @@ export default function OrdersPage() {
                   <select
                     value={formData.customer_id}
                     onChange={(e) => {
-                      const selectedCustomer = customers.find(c => c.customer_id === e.target.value);
+                      const selectedCustomer = customers.find(
+                        (c) => c.customer_id === e.target.value
+                      );
                       setFormData({
                         ...formData,
                         customer_id: e.target.value,
@@ -499,7 +510,9 @@ export default function OrdersPage() {
                   <input
                     type="date"
                     value={formData.delivery_deadline}
-                    onChange={(e) => setFormData({ ...formData, delivery_deadline: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, delivery_deadline: e.target.value })
+                    }
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -567,7 +580,9 @@ export default function OrdersPage() {
                         <input
                           type="number"
                           value={item.quantity}
-                          onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
+                          onChange={(e) =>
+                            handleItemChange(index, 'quantity', parseInt(e.target.value))
+                          }
                           required
                           min="1"
                           placeholder="数量"
@@ -578,7 +593,9 @@ export default function OrdersPage() {
                         <input
                           type="number"
                           value={item.unit_price}
-                          onChange={(e) => handleItemChange(index, 'unit_price', parseFloat(e.target.value))}
+                          onChange={(e) =>
+                            handleItemChange(index, 'unit_price', parseFloat(e.target.value))
+                          }
                           required
                           min="0"
                           step="0.01"
@@ -615,7 +632,7 @@ export default function OrdersPage() {
                   disabled={loading}
                   className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
                 >
-                  {loading ? '保存中...' : (editingOrder ? '更新' : '登録')}
+                  {loading ? '保存中...' : editingOrder ? '更新' : '登録'}
                 </button>
                 <button
                   type="button"

@@ -2,14 +2,14 @@
 
 // 作業者名と色のマッピング（手動で設定）
 const WORKER_COLOR_MAP: Record<string, string> = {
-  '中西': '#3b82f6',  // blue-500
-  '西村': '#10b981',  // green-500
-  '井上': '#f59e0b',  // amber-500
-  '田中': '#ef4444',  // red-500
-  '佐藤': '#8b5cf6',  // violet-500
-  '鈴木': '#ec4899',  // pink-500
-  '高橋': '#14b8a6',  // teal-500
-  '渡辺': '#f97316',  // orange-500
+  中西: '#3b82f6', // blue-500
+  西村: '#10b981', // green-500
+  井上: '#f59e0b', // amber-500
+  田中: '#ef4444', // red-500
+  佐藤: '#8b5cf6', // violet-500
+  鈴木: '#ec4899', // pink-500
+  高橋: '#14b8a6', // teal-500
+  渡辺: '#f97316', // orange-500
 };
 
 // デフォルトの色リスト（マッピングにない作業者用）
@@ -52,7 +52,9 @@ export function getWorkerColorByName(workerName: string): string {
 }
 
 // 作業者のリストから色マップを作成
-export function createWorkerColorMap(workers: Array<{ worker_id: string; name: string }>): Map<string, string> {
+export function createWorkerColorMap(
+  workers: Array<{ worker_id: string; name: string }>
+): Map<string, string> {
   const colorMap = new Map<string, string>();
   workers.forEach((worker) => {
     const color = getWorkerColorByName(worker.name);

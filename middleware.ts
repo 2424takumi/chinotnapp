@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 /**
  * セキュリティヘッダーを設定するミドルウェア
@@ -15,28 +15,28 @@ import type { NextRequest } from 'next/server'
  * @see https://owasp.org/www-project-secure-headers/
  */
 export function middleware(request: NextRequest) {
-  const response = NextResponse.next()
+  const response = NextResponse.next();
 
   // ========================================
   // 1. X-Frame-Options: クリックジャッキング対策
   // ========================================
   // ページを<iframe>内に表示することを禁止
   // DENY: すべてのフレーム埋め込みを禁止
-  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-Frame-Options', 'DENY');
 
   // ========================================
   // 2. X-Content-Type-Options: MIMEスニッフィング対策
   // ========================================
   // ブラウザがContent-Typeを推測するのを防ぐ
   // nosniff: Content-Typeヘッダーを厳密に守る
-  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('X-Content-Type-Options', 'nosniff');
 
   // ========================================
   // 3. Referrer-Policy: リファラー情報の制御
   // ========================================
   // クロスオリジンリクエストでは送信元URLのオリジン（ドメイン）のみを送信
   // strict-origin-when-cross-origin: HTTPSからHTTPへのダウングレード時はリファラーを送信しない
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   // ========================================
   // 4. Permissions-Policy: ブラウザ機能の制限
@@ -46,7 +46,7 @@ export function middleware(request: NextRequest) {
   response.headers.set(
     'Permissions-Policy',
     'camera=(), microphone=(), geolocation=(), payment=()'
-  )
+  );
 
   // ========================================
   // 5. Strict-Transport-Security (HSTS)
@@ -60,7 +60,7 @@ export function middleware(request: NextRequest) {
       // includeSubDomains: サブドメインにも適用
       // preload: ブラウザのHSTS Preloadリストに登録可能
       'max-age=31536000; includeSubDomains; preload'
-    )
+    );
   }
 
   // ========================================
@@ -100,19 +100,19 @@ export function middleware(request: NextRequest) {
     // form-action: フォーム送信先を制限
     // self: 同一オリジンのみ
     "form-action 'self'",
-  ].join('; ')
+  ].join('; ');
 
-  response.headers.set('Content-Security-Policy', cspDirectives)
+  response.headers.set('Content-Security-Policy', cspDirectives);
 
   // ========================================
   // 開発環境でのデバッグ情報（本番環境では無効）
   // ========================================
   if (process.env.NODE_ENV === 'development') {
     // セキュリティヘッダーが正しく設定されていることをコンソールで確認可能
-    response.headers.set('X-Debug-Security-Headers', 'enabled')
+    response.headers.set('X-Debug-Security-Headers', 'enabled');
   }
 
-  return response
+  return response;
 }
 
 /**
@@ -132,4 +132,4 @@ export const config = {
      */
     '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|api/auth).*)',
   ],
-}
+};

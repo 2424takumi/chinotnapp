@@ -1,25 +1,25 @@
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/hooks/useAuth'
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 export default function Home() {
-  const router = useRouter()
-  const { user, worker, loading: authLoading } = useAuth()
+  const router = useRouter();
+  const { user, worker, loading: authLoading } = useAuth();
 
   // 認証状態に応じてリダイレクト
   useEffect(() => {
     if (!authLoading) {
       if (user && worker) {
         // ログイン済みの場合はダッシュボードへ
-        router.push('/worker/dashboard')
+        router.push('/worker/dashboard');
       } else {
         // 未ログインの場合はログイン画面へ
-        router.push('/login')
+        router.push('/login');
       }
     }
-  }, [authLoading, user, worker, router])
+  }, [authLoading, user, worker, router]);
 
   // 認証チェック中またはリダイレクト中はローディング表示
   return (
@@ -29,5 +29,5 @@ export default function Home() {
         <p className="mt-4 text-gray-600">読み込み中...</p>
       </div>
     </div>
-  )
+  );
 }

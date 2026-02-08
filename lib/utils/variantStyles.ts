@@ -254,16 +254,16 @@ export function getVariantPreviewColor(valueName: string): string {
   const type = detectVariantType(valueName);
 
   const colorMap: Record<VariantType, string> = {
-    [VariantType.SHIMAMURA]: '#3B82F6',    // blue-500
-    [VariantType.NORMAL]: '#10B981',       // emerald-500
-    [VariantType.AKAFUJI]: '#F43F5E',      // rose-500
-    [VariantType.FLOWER]: '#A855F7',       // purple-500
-    [VariantType.ARABESQUE]: '#A855F7',    // purple-500
-    [VariantType.PLAIN]: '#64748B',        // slate-500
-    [VariantType.WALNUT]: '#F59E0B',       // amber-500
-    [VariantType.MAPLE]: '#EAB308',        // yellow-500
-    [VariantType.ZELKOVA]: '#F97316',      // orange-500
-    [VariantType.UNKNOWN]: '#6B7280',      // gray-500
+    [VariantType.SHIMAMURA]: '#3B82F6', // blue-500
+    [VariantType.NORMAL]: '#10B981', // emerald-500
+    [VariantType.AKAFUJI]: '#F43F5E', // rose-500
+    [VariantType.FLOWER]: '#A855F7', // purple-500
+    [VariantType.ARABESQUE]: '#A855F7', // purple-500
+    [VariantType.PLAIN]: '#64748B', // slate-500
+    [VariantType.WALNUT]: '#F59E0B', // amber-500
+    [VariantType.MAPLE]: '#EAB308', // yellow-500
+    [VariantType.ZELKOVA]: '#F97316', // orange-500
+    [VariantType.UNKNOWN]: '#6B7280', // gray-500
   };
 
   return colorMap[type];

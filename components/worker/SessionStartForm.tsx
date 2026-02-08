@@ -1,55 +1,52 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import type { Part, Operation } from '@/lib/types/database'
-import { toast } from 'sonner'
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import type { Part, Operation } from '@/lib/types/database';
+import { toast } from 'sonner';
 
 interface SessionStartFormProps {
-  workerId: string
-  onStart: (params: {
-    partId: string
-    operationId: string
-  }) => Promise<void>
-  loading: boolean
+  workerId: string;
+  onStart: (params: { partId: string; operationId: string }) => Promise<void>;
+  loading: boolean;
 }
 
 export function SessionStartForm({ workerId, onStart, loading }: SessionStartFormProps) {
-  const supabase = createClient()
+  const supabase = createClient();
 
-  const [parts, setParts] = useState<Part[]>([])
-  const [operations, setOperations] = useState<Operation[]>([])
+  const [parts, setParts] = useState<Part[]>([]);
+  const [operations, setOperations] = useState<Operation[]>([]);
 
-  const [selectedPartId, setSelectedPartId] = useState('')
-  const [selectedOperationId, setSelectedOperationId] = useState('')
+  const [selectedPartId, setSelectedPartId] = useState('');
+  const [selectedOperationId, setSelectedOperationId] = useState('');
 
   // 部品一覧を取得
   useEffect(() => {
-    fetchParts()
-  }, [])
+    fetchParts();
+  }, []);
 
   // 工程一覧を取得（部品選択時）
   useEffect(() => {
     if (selectedPartId) {
-      fetchOperations(selectedPartId)
+      fetchOperations(selectedPartId);
     } else {
-      setOperations([])
-      setSelectedOperationId('')
+      setOperations([]);
+      setSelectedOperationId('');
     }
-  }, [selectedPartId])
+  }, [selectedPartId]);
 
   const fetchParts = async () => {
     const { data, error } = await supabase
       .from('parts')
       .select('*')
       .eq('active', true)
-      .order('order_index')
+      .order('order_index');
     if (error) {
-      console.error('部品取得エラー:', error)
-      toast.error(`部品の取得に失敗しました: ${error.message}`)
+      console.error('部品取得エラー:', error);
+      toast.error(`部品の取得に失敗しました: ${error.message}`);
     }
-    if (data) setParts(data)
-  }
+    if (data) setParts(data);
+  };
 
   const fetchOperations = async (partId: string) => {
     const { data, error } = await supabase
@@ -57,27 +54,27 @@ export function SessionStartForm({ workerId, onStart, loading }: SessionStartFor
       .select('*')
       .eq('part_id', partId)
       .eq('active', true)
-      .order('order_index')
+      .order('order_index');
     if (error) {
-      console.error('工程取得エラー:', error)
-      toast.error(`工程の取得に失敗しました: ${error.message}`)
+      console.error('工程取得エラー:', error);
+      toast.error(`工程の取得に失敗しました: ${error.message}`);
     }
-    if (data) setOperations(data)
-  }
+    if (data) setOperations(data);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!selectedPartId || !selectedOperationId) {
-      toast.error('部品と工程を選択してください')
-      return
+      toast.error('部品と工程を選択してください');
+      return;
     }
 
     await onStart({
       partId: selectedPartId,
       operationId: selectedOperationId,
-    })
-  }
+    });
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -124,9 +121,7 @@ export function SessionStartForm({ workerId, onStart, loading }: SessionStartFor
           </select>
         </div>
 
-        <p className="text-sm text-gray-600">
-          ※ 種類（色・形など）は作業終了時に入力します
-        </p>
+        <p className="text-sm text-gray-600">※ 種類（色・形など）は作業終了時に入力します</p>
       </div>
 
       <button
@@ -137,5 +132,5 @@ export function SessionStartForm({ workerId, onStart, loading }: SessionStartFor
         {loading ? '開始中...' : '作業開始'}
       </button>
     </form>
-  )
+  );
 }

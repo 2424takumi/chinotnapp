@@ -264,18 +264,12 @@ export class InventoryCalculator {
    * Calculate operation totals using pre-built indexes (O(1) per operation)
    */
   private calculateOperationTotals(partOperations: Operation[]): OperationTotal[] {
-    return partOperations.map(op => {
+    return partOperations.map((op) => {
       const opLogs = this.logsByOperation.get(op.operation_id) || [];
 
-      const goodTotal = opLogs.reduce(
-        (sum, log) => sum + (log.quantity - log.loss_quantity),
-        0
-      );
+      const goodTotal = opLogs.reduce((sum, log) => sum + (log.quantity - log.loss_quantity), 0);
 
-      const totalQuantity = opLogs.reduce(
-        (sum, log) => sum + log.quantity,
-        0
-      );
+      const totalQuantity = opLogs.reduce((sum, log) => sum + log.quantity, 0);
 
       return {
         operation_id: op.operation_id,
@@ -290,10 +284,7 @@ export class InventoryCalculator {
   /**
    * Calculate variant inventories using Map for efficient grouping
    */
-  private calculateVariantInventories(
-    operationId: string,
-    partId: string
-  ): VariantInventory[] {
+  private calculateVariantInventories(operationId: string, partId: string): VariantInventory[] {
     const opAttrs = this.operationAttributesByOperation.get(operationId) || [];
 
     if (opAttrs.length > 0) {
@@ -309,7 +300,10 @@ export class InventoryCalculator {
    * Calculate attribute-based variant inventories
    */
   private calculateAttributeBasedVariants(operationId: string): VariantInventory[] {
-    const combinationMap = new Map<string, { valueIds: string[]; valueName: string; inventory: number }>();
+    const combinationMap = new Map<
+      string,
+      { valueIds: string[]; valueName: string; inventory: number }
+    >();
 
     // Aggregate work logs
     const opLogs = this.logsByOperation.get(operationId) || [];
@@ -355,22 +349,26 @@ export class InventoryCalculator {
     if (!log.work_log_attributes || log.work_log_attributes.length === 0) {
       // Uncategorized
       const key = 'uncategorized';
-      const existing = combinationMap.get(key) || { valueIds: [], valueName: '未分類', inventory: 0 };
-      existing.inventory += (log.quantity - log.loss_quantity);
+      const existing = combinationMap.get(key) || {
+        valueIds: [],
+        valueName: '未分類',
+        inventory: 0,
+      };
+      existing.inventory += log.quantity - log.loss_quantity;
       combinationMap.set(key, existing);
     } else {
       // Categorized by attribute values
       const logValueIds = log.work_log_attributes
-        .map(attr => attr.value_id)
-        .filter(id => id)
+        .map((attr) => attr.value_id)
+        .filter((id) => id)
         .sort();
 
       const key = logValueIds.join('|');
 
       if (!combinationMap.has(key)) {
         const valueNames = log.work_log_attributes
-          .filter(attr => attr.variant_attribute_values)
-          .map(attr => {
+          .filter((attr) => attr.variant_attribute_values)
+          .map((attr) => {
             const attrData = attr.variant_attribute_values!;
             return `${attrData.variant_attributes?.name || ''}:${attrData.name || ''}`;
           })
@@ -379,12 +377,12 @@ export class InventoryCalculator {
         combinationMap.set(key, {
           valueIds: logValueIds,
           valueName: valueNames || '不明',
-          inventory: 0
+          inventory: 0,
         });
       }
 
       const existing = combinationMap.get(key)!;
-      existing.inventory += (log.quantity - log.loss_quantity);
+      existing.inventory += log.quantity - log.loss_quantity;
     }
   }
 
@@ -398,22 +396,26 @@ export class InventoryCalculator {
     if (!adj.inventory_adjustment_attributes || adj.inventory_adjustment_attributes.length === 0) {
       // Uncategorized
       const key = 'uncategorized';
-      const existing = combinationMap.get(key) || { valueIds: [], valueName: '未分類', inventory: 0 };
+      const existing = combinationMap.get(key) || {
+        valueIds: [],
+        valueName: '未分類',
+        inventory: 0,
+      };
       existing.inventory += adj.adjustment_quantity;
       combinationMap.set(key, existing);
     } else {
       // Categorized
       const adjValueIds = adj.inventory_adjustment_attributes
-        .map(attr => attr.value_id)
-        .filter(id => id)
+        .map((attr) => attr.value_id)
+        .filter((id) => id)
         .sort();
 
       const key = adjValueIds.join('|');
 
       if (!combinationMap.has(key)) {
         const valueNames = adj.inventory_adjustment_attributes
-          .filter(attr => attr.variant_attribute_values)
-          .map(attr => {
+          .filter((attr) => attr.variant_attribute_values)
+          .map((attr) => {
             const attrData = attr.variant_attribute_values!;
             return `${attrData.variant_attributes?.name || ''}:${attrData.name || ''}`;
           })
@@ -422,7 +424,7 @@ export class InventoryCalculator {
         combinationMap.set(key, {
           valueIds: adjValueIds,
           valueName: valueNames || '不明',
-          inventory: 0
+          inventory: 0,
         });
       }
 
@@ -438,7 +440,10 @@ export class InventoryCalculator {
     cons: ProcessConsumption,
     combinationMap: Map<string, { valueIds: string[]; valueName: string; inventory: number }>
   ): void {
-    if (!cons.consumed_attribute_values || Object.keys(cons.consumed_attribute_values).length === 0) {
+    if (
+      !cons.consumed_attribute_values ||
+      Object.keys(cons.consumed_attribute_values).length === 0
+    ) {
       // Uncategorized
       const key = 'uncategorized';
       const existing = combinationMap.get(key);
@@ -448,7 +453,7 @@ export class InventoryCalculator {
     } else {
       // Categorized
       const consValueIds = Object.values(cons.consumed_attribute_values)
-        .filter(id => id)
+        .filter((id) => id)
         .sort();
 
       const key = consValueIds.join('|');
@@ -466,7 +471,10 @@ export class InventoryCalculator {
     cons: OrderConsumption,
     combinationMap: Map<string, { valueIds: string[]; valueName: string; inventory: number }>
   ): void {
-    if (!cons.consumed_attribute_values || Object.keys(cons.consumed_attribute_values).length === 0) {
+    if (
+      !cons.consumed_attribute_values ||
+      Object.keys(cons.consumed_attribute_values).length === 0
+    ) {
       // Uncategorized
       const key = 'uncategorized';
       const existing = combinationMap.get(key);
@@ -476,7 +484,7 @@ export class InventoryCalculator {
     } else {
       // Categorized
       const consValueIds = Object.values(cons.consumed_attribute_values)
-        .filter(id => id)
+        .filter((id) => id)
         .sort();
 
       const key = consValueIds.join('|');
@@ -495,10 +503,8 @@ export class InventoryCalculator {
     const opLogs = this.logsByOperation.get(operationId) || [];
 
     return partVariants
-      .map(variant => {
-        const variantLogs = opLogs.filter(
-          log => log.variant_id === variant.variant_id
-        );
+      .map((variant) => {
+        const variantLogs = opLogs.filter((log) => log.variant_id === variant.variant_id);
 
         const variantGood = variantLogs.reduce(
           (sum, log) => sum + (log.quantity - log.loss_quantity),
@@ -511,7 +517,7 @@ export class InventoryCalculator {
           inventory: variantGood,
         };
       })
-      .filter(v => v.inventory > 0);
+      .filter((v) => v.inventory > 0);
   }
 
   /**
@@ -545,12 +551,18 @@ export class InventoryCalculator {
 
         // Inventory adjustments
         const opAdjustments = this.adjustmentsByOperation.get(op.operation_id) || [];
-        const adjustmentTotal = opAdjustments.reduce((sum, adj) => sum + adj.adjustment_quantity, 0);
+        const adjustmentTotal = opAdjustments.reduce(
+          (sum, adj) => sum + adj.adjustment_quantity,
+          0
+        );
         inventory += adjustmentTotal;
 
         // Order consumptions
         const opOrderConsumptions = this.orderConsumptionsByOperation.get(op.operation_id) || [];
-        const orderConsumedTotal = opOrderConsumptions.reduce((sum, cons) => sum + cons.consumed_quantity, 0);
+        const orderConsumedTotal = opOrderConsumptions.reduce(
+          (sum, cons) => sum + cons.consumed_quantity,
+          0
+        );
         inventory -= orderConsumedTotal;
 
         // Calculate variant inventories
@@ -567,7 +579,7 @@ export class InventoryCalculator {
 
       // Filter operations with inventory > 0, sort by order_index
       const inventoryOperations = operationInventories
-        .filter(op => op.inventory > 0)
+        .filter((op) => op.inventory > 0)
         .sort((a, b) => a.order_index - b.order_index);
 
       // Add all parts (even with empty operations)

@@ -1,49 +1,49 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { signInWithEmail } from '@/lib/auth'
-import { useAuth } from '@/lib/hooks/useAuth'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { signInWithEmail } from '@/lib/auth';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 export default function LoginPage() {
-  const router = useRouter()
-  const { user, worker, loading: authLoading } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const router = useRouter();
+  const { user, worker, loading: authLoading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // 既にログイン済みの場合はダッシュボードにリダイレクト
   useEffect(() => {
     if (!authLoading && user && worker) {
-      router.push('/worker/dashboard')
+      router.push('/worker/dashboard');
     }
-  }, [authLoading, user, worker, router])
+  }, [authLoading, user, worker, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
 
     try {
-      const { data, error } = await signInWithEmail(email, password)
+      const { data, error } = await signInWithEmail(email, password);
 
       if (error) {
-        setError('ログインに失敗しました。メールアドレスとパスワードを確認してください。')
-        return
+        setError('ログインに失敗しました。メールアドレスとパスワードを確認してください。');
+        return;
       }
 
       if (data.user) {
         // ログイン成功 - ワーカーダッシュボードにリダイレクト
-        router.push('/worker/dashboard')
-        router.refresh()
+        router.push('/worker/dashboard');
+        router.refresh();
       }
     } catch (err) {
-      setError('予期しないエラーが発生しました。')
+      setError('予期しないエラーが発生しました。');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // 認証チェック中またはリダイレクト中はローディング表示
   if (authLoading || (user && worker)) {
@@ -54,7 +54,7 @@ export default function LoginPage() {
           <p className="mt-4 text-gray-600 text-pretty">読み込み中...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -127,15 +127,12 @@ export default function LoginPage() {
           </div>
 
           <div className="text-center">
-            <a
-              href="/admin"
-              className="text-sm text-indigo-600 hover:text-indigo-500"
-            >
+            <a href="/admin" className="text-sm text-indigo-600 hover:text-indigo-500">
               管理画面へ
             </a>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }

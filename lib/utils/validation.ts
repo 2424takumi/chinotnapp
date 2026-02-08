@@ -141,12 +141,7 @@ export function validateQuantity(
   value: string,
   options: QuantityValidationOptions = {}
 ): ValidationResult {
-  const {
-    min = 1,
-    max,
-    allowZero = false,
-    errorMessage,
-  } = options;
+  const { min = 1, max, allowZero = false, errorMessage } = options;
 
   // Empty check
   if (value.trim() === '') {
@@ -253,10 +248,7 @@ export function validateAdjustmentQuantity(value: string): ValidationResult {
  * validateMoveQuantity('15', 10) // => { isValid: false, error: '...' }
  * ```
  */
-export function validateMoveQuantity(
-  value: string,
-  maxInventory: number
-): ValidationResult {
+export function validateMoveQuantity(value: string, maxInventory: number): ValidationResult {
   if (value.trim() === '') {
     return {
       isValid: false,

@@ -26,7 +26,10 @@ interface CategoryInventoryGroupProps {
     inventory: number,
     variants?: VariantInventory[]
   ) => void;
-  getShamisen組Count: (partId: string, inventory: number) => {
+  getShamisen組Count: (
+    partId: string,
+    inventory: number
+  ) => {
     count: number;
     remainder: number;
     unit: string;
@@ -34,35 +37,31 @@ interface CategoryInventoryGroupProps {
   } | null;
 }
 
-const CategoryInventoryGroup = memo<CategoryInventoryGroupProps>(({
-  categoryName,
-  parts,
-  onOpenModal,
-  onOpenDetailModal,
-  getShamisen組Count,
-}) => {
-  if (parts.length === 0) {
-    return null;
+const CategoryInventoryGroup = memo<CategoryInventoryGroupProps>(
+  ({ categoryName, parts, onOpenModal, onOpenDetailModal, getShamisen組Count }) => {
+    if (parts.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="bg-gray-100 rounded-lg p-3 md:p-6 shadow-sm">
+        <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4 text-balance">
+          【{categoryName}】
+        </h2>
+
+        {parts.map((partData) => (
+          <PartInventoryGroup
+            key={partData.part_id}
+            partData={partData}
+            onOpenModal={onOpenModal}
+            onOpenDetailModal={onOpenDetailModal}
+            getShamisen組Count={getShamisen組Count}
+          />
+        ))}
+      </div>
+    );
   }
-
-  return (
-    <div className="bg-gray-100 rounded-lg p-3 md:p-6 shadow-sm">
-      <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4 text-balance">
-        【{categoryName}】
-      </h2>
-
-      {parts.map((partData) => (
-        <PartInventoryGroup
-          key={partData.part_id}
-          partData={partData}
-          onOpenModal={onOpenModal}
-          onOpenDetailModal={onOpenDetailModal}
-          getShamisen組Count={getShamisen組Count}
-        />
-      ))}
-    </div>
-  );
-});
+);
 
 CategoryInventoryGroup.displayName = 'CategoryInventoryGroup';
 

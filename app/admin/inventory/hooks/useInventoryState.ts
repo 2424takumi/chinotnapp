@@ -21,7 +21,13 @@
  */
 
 import { useReducer, Dispatch } from 'react';
-import type { Part, Operation, ProductVariant, Worker, InventoryAdjustment } from '@/lib/types/database';
+import type {
+  Part,
+  Operation,
+  ProductVariant,
+  Worker,
+  InventoryAdjustment,
+} from '@/lib/types/database';
 import type { PartInventory, VariantInventory } from '@/lib/utils/inventoryCalculator';
 import type {
   WorkLogWithAttributes,
@@ -142,12 +148,18 @@ export type InventoryAction =
   | { type: 'RESET_FORM' }
 
   // Edit Actions
-  | { type: 'START_EDIT_LOG'; payload: { logId: string; quantity: number; loss_quantity: number; note: string } }
+  | {
+      type: 'START_EDIT_LOG';
+      payload: { logId: string; quantity: number; loss_quantity: number; note: string };
+    }
   | { type: 'CANCEL_EDIT_LOG' }
   | { type: 'UPDATE_EDIT_FORM'; payload: Partial<InventoryState['edit']['editFormData']> }
 
   // Logs Actions
-  | { type: 'SET_INVENTORY_LOGS'; payload: { logs: WorkLogWithAttributes[]; adjustments: InventoryAdjustmentWithAttributes[] } }
+  | {
+      type: 'SET_INVENTORY_LOGS';
+      payload: { logs: WorkLogWithAttributes[]; adjustments: InventoryAdjustmentWithAttributes[] };
+    }
 
   // Variant Operations Actions
   | { type: 'SET_VARIANT_ADJUST_QTY'; payload: { key: string; value: string } }
@@ -221,10 +233,7 @@ export const initialState: InventoryState = {
 // Reducer Function
 // ========================================
 
-export function inventoryReducer(
-  state: InventoryState,
-  action: InventoryAction
-): InventoryState {
+export function inventoryReducer(state: InventoryState, action: InventoryAction): InventoryState {
   switch (action.type) {
     // Data Actions
     case 'SET_DATA':

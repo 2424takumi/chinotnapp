@@ -97,12 +97,14 @@ export default function AdminLogsPage() {
     try {
       let query = supabase
         .from('work_logs')
-        .select(`
+        .select(
+          `
           *,
           workers(name),
           parts(name),
           operations(name)
-        `)
+        `
+        )
         .eq('is_deleted', false)
         .order('created_at', { ascending: false });
 
@@ -125,14 +127,16 @@ export default function AdminLogsPage() {
       if (logIds.length > 0) {
         const { data: allAttrData } = await supabase
           .from('work_log_attributes')
-          .select(`
+          .select(
+            `
             work_log_id,
             value_id,
             variant_attribute_values (
               name,
               variant_attributes (name)
             )
-          `)
+          `
+          )
           .in('work_log_id', logIds);
 
         // ログIDごとに属性値をグループ化
@@ -144,7 +148,7 @@ export default function AdminLogsPage() {
             }
             attributeMap[logId].push({
               attribute_name: attr.variant_attribute_values?.variant_attributes?.name || '',
-              value_name: attr.variant_attribute_values?.name || ''
+              value_name: attr.variant_attribute_values?.name || '',
             });
           }
         }
@@ -221,9 +225,10 @@ export default function AdminLogsPage() {
       const minPerGood = goodQty > 0 ? (log.duration_minutes / goodQty).toFixed(2) : '—';
 
       // 属性値を文字列に変換
-      const attributesStr = log.attribute_values.length > 0
-        ? log.attribute_values.map(av => `${av.attribute_name}:${av.value_name}`).join(', ')
-        : '';
+      const attributesStr =
+        log.attribute_values.length > 0
+          ? log.attribute_values.map((av) => `${av.attribute_name}:${av.value_name}`).join(', ')
+          : '';
 
       return [
         log.work_date,
@@ -361,7 +366,9 @@ export default function AdminLogsPage() {
       {loading ? (
         <div className="bg-white rounded-lg shadow p-8 text-center">読み込み中...</div>
       ) : logs.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">データがありません</div>
+        <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+          データがありません
+        </div>
       ) : (
         <>
           {/* スマホ表示：カード形式 */}
@@ -392,7 +399,9 @@ export default function AdminLogsPage() {
                     </div>
                     <div>
                       <span className="text-gray-600">作業者:</span>{' '}
-                      <span style={{ color: getWorkerColorByName(log.worker_name), fontWeight: '600' }}>
+                      <span
+                        style={{ color: getWorkerColorByName(log.worker_name), fontWeight: '600' }}
+                      >
                         {log.worker_name}
                       </span>
                     </div>
@@ -401,7 +410,10 @@ export default function AdminLogsPage() {
                         <span className="text-gray-600">属性:</span>{' '}
                         <div className="flex flex-wrap gap-1 mt-1">
                           {log.attribute_values.map((av, idx) => (
-                            <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                            <span
+                              key={idx}
+                              className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
+                            >
                               {av.attribute_name}: {av.value_name}
                             </span>
                           ))}
@@ -475,13 +487,12 @@ export default function AdminLogsPage() {
                   {logs.map((log) => {
                     const goodQty = log.quantity - log.loss_quantity;
                     const minPerPiece = (log.duration_minutes / log.quantity).toFixed(2);
-                    const minPerGood = goodQty > 0 ? (log.duration_minutes / goodQty).toFixed(2) : '—';
+                    const minPerGood =
+                      goodQty > 0 ? (log.duration_minutes / goodQty).toFixed(2) : '—';
 
                     return (
                       <tr key={log.log_id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {log.work_date}
-                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">{log.work_date}</td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           {new Date(log.created_at).toLocaleString('ja-JP', {
                             year: 'numeric',
@@ -492,7 +503,12 @@ export default function AdminLogsPage() {
                           })}
                         </td>
                         <td className="px-4 py-3">
-                          <span style={{ color: getWorkerColorByName(log.worker_name), fontWeight: '600' }}>
+                          <span
+                            style={{
+                              color: getWorkerColorByName(log.worker_name),
+                              fontWeight: '600',
+                            }}
+                          >
                             {log.worker_name}
                           </span>
                         </td>
@@ -502,7 +518,10 @@ export default function AdminLogsPage() {
                           {log.attribute_values.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
                               {log.attribute_values.map((av, idx) => (
-                                <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs whitespace-nowrap">
+                                <span
+                                  key={idx}
+                                  className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs whitespace-nowrap"
+                                >
                                   {av.attribute_name}: {av.value_name}
                                 </span>
                               ))}
@@ -517,9 +536,7 @@ export default function AdminLogsPage() {
                         <td className="px-4 py-3 text-right">{goodQty}</td>
                         <td className="px-4 py-3 text-right">{minPerPiece}</td>
                         <td className="px-4 py-3 text-right">{minPerGood}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
-                          {log.note || '—'}
-                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{log.note || '—'}</td>
                         <td className="px-4 py-3 text-center whitespace-nowrap">
                           <button
                             onClick={() => handleDelete(log.log_id)}
@@ -538,9 +555,7 @@ export default function AdminLogsPage() {
         </>
       )}
 
-      <div className="text-sm text-gray-600">
-        全{logs.length}件
-      </div>
+      <div className="text-sm text-gray-600">全{logs.length}件</div>
     </div>
   );
 }

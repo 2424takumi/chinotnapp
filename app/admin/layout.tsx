@@ -1,74 +1,67 @@
-'use client'
+'use client';
 
 import Link from 'next/link';
 import { AuthGuard } from '@/components/AuthGuard';
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard requireWorker={false}>
-    <div className="min-h-dvh bg-gray-100">
-      {/* ヘッダー */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900 text-balance">管理画面</h1>
-            <Link
-              href="/worker/dashboard"
-              className="text-sm text-blue-600 hover:underline"
-            >
-              作業画面へ戻る
-            </Link>
+      <div className="min-h-dvh bg-gray-100">
+        {/* ヘッダー */}
+        <header className="bg-white shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900 text-balance">管理画面</h1>
+              <Link href="/worker/dashboard" className="text-sm text-blue-600 hover:underline">
+                作業画面へ戻る
+              </Link>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* ナビゲーション */}
-      <nav className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex space-x-8">
-            <Link
-              href="/admin"
-              className="py-4 px-2 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
-              実績一覧
-            </Link>
-            <Link
-              href="/admin/charts"
-              className="py-4 px-2 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
-              グラフ
-            </Link>
-            <Link
-              href="/admin/inventory"
-              className="py-4 px-2 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
-              在庫状況
-            </Link>
-            <Link
-              href="/admin/masters"
-              className="py-4 px-2 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
-              マスタ管理
-            </Link>
-            <Link
-              href="/admin/orders"
-              className="py-4 px-2 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
-              受注管理
-            </Link>
+        {/* ナビゲーション */}
+        <nav className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex space-x-8">
+              <Link
+                href="/admin"
+                className="py-4 px-2 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium text-gray-700 hover:text-gray-900"
+              >
+                実績一覧
+              </Link>
+              <Link
+                href="/admin/charts"
+                className="py-4 px-2 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium text-gray-700 hover:text-gray-900"
+              >
+                グラフ
+              </Link>
+              <Link
+                href="/admin/inventory"
+                className="py-4 px-2 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium text-gray-700 hover:text-gray-900"
+              >
+                在庫状況
+              </Link>
+              <Link
+                href="/admin/masters"
+                className="py-4 px-2 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium text-gray-700 hover:text-gray-900"
+              >
+                マスタ管理
+              </Link>
+              <Link
+                href="/admin/orders"
+                className="py-4 px-2 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium text-gray-700 hover:text-gray-900"
+              >
+                受注管理
+              </Link>
+            </div>
           </div>
-        </div>
-      </nav>
+        </nav>
 
-      {/* コンテンツ */}
-      <main className="max-w-7xl mx-auto px-2 md:px-4 py-4 md:py-8 overflow-x-hidden">
-        {children}
-      </main>
-    </div>
+        {/* コンテンツ */}
+        <main className="max-w-7xl mx-auto px-2 md:px-4 py-4 md:py-8 overflow-x-hidden">
+          {children}
+        </main>
+      </div>
     </AuthGuard>
   );
 }
