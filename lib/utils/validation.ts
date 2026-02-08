@@ -170,8 +170,8 @@ export function validateQuantity(
     };
   }
 
-  // Min check
-  if (quantity < min) {
+  // Min check (skip if allowZero is true and quantity is 0)
+  if (!(allowZero && quantity === 0) && quantity < min) {
     return {
       isValid: false,
       error: errorMessage || `数量は${min}以上で入力してください`,
