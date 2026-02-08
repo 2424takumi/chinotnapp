@@ -8,6 +8,8 @@ import {
   consumeInventoryForOrder,
   restoreInventoryForOrder,
 } from '@/lib/services/orderInventoryService';
+import OrderChartsView from './components/OrderChartsView';
+import Link from 'next/link';
 
 interface OrderWithDetails extends Order {
   order_items: (OrderItem & {
@@ -41,6 +43,14 @@ export default function OrdersPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState<OrderWithDetails | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  // Graph view state
+  const [viewMode, setViewMode] = useState<'list' | 'chart'>('list');
+  const [timeRange, setTimeRange] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [filterCustomer, setFilterCustomer] = useState<string>('all');
+  const [filterProduct, setFilterProduct] = useState<string>('all');
+  const [filterDateFrom, setFilterDateFrom] = useState<string>('');
+  const [filterDateTo, setFilterDateTo] = useState<string>('');
 
   // フォーム状態
   const [formData, setFormData] = useState<OrderFormData>({
@@ -343,16 +353,56 @@ export default function OrdersPage() {
     [orders, filterStatus]
   );
 
+  // Filter orders for chart view
+  const chartFilteredOrders = useMemo(() => {
+    let filtered = orders;
+
+    // Status filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter((o) => o.status === filterStatus);
+    }
+
+    // Customer filter
+    if (filterCustomer !== 'all') {
+      filtered = filtered.filter((o) => o.customer_id === filterCustomer);
+    }
+
+    // Product filter
+    if (filterProduct !== 'all') {
+      filtered = filtered.filter((o) =>
+        o.order_items.some((item) => item.variant_id === filterProduct)
+      );
+    }
+
+    // Date range filter
+    if (filterDateFrom) {
+      filtered = filtered.filter((o) => o.order_date >= filterDateFrom);
+    }
+    if (filterDateTo) {
+      filtered = filtered.filter((o) => o.order_date <= filterDateTo);
+    }
+
+    return filtered;
+  }, [orders, filterStatus, filterCustomer, filterProduct, filterDateFrom, filterDateTo]);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-balance">受注管理</h2>
-        <button
-          onClick={handleNewOrder}
-          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
-        >
-          新規受注
-        </button>
+        <div className="flex gap-2">
+          <Link
+            href="/admin/orders-analytics"
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center gap-2"
+          >
+            📊 分析・グラフ
+          </Link>
+          <button
+            onClick={handleNewOrder}
+            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+          >
+            新規受注
+          </button>
+        </div>
       </div>
 
       {/* フィルタ */}
