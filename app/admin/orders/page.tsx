@@ -439,6 +439,9 @@ export default function OrdersPage() {
                 納期
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                受注個数
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 合計金額
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -456,6 +459,9 @@ export default function OrdersPage() {
                 <td className="px-4 py-3">{order.customer_name}</td>
                 <td className="px-4 py-3">{order.order_date}</td>
                 <td className="px-4 py-3">{order.delivery_deadline || '—'}</td>
+                <td className="px-4 py-3 tabular-nums">
+                  {order.order_items.reduce((sum, item) => sum + item.quantity, 0)}個
+                </td>
                 <td className="px-4 py-3 tabular-nums">
                   ¥{order.total_amount?.toLocaleString() || 0}
                 </td>
