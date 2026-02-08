@@ -337,6 +337,47 @@ export default function OrdersPage() {
     }
   };
 
+  const handleDeleteOrder = async (order: OrderWithDetails) => {
+    // 確認ダイアログ
+    const confirmMessage = `受注番号「${order.order_number}」を削除してもよろしいですか？\n\n顧客: ${order.customer_name}\n金額: ¥${order.total_amount?.toLocaleString() || 0}\n\nこの操作は取り消せません。`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      // 納品完了している場合は在庫を復元
+      if (order.status === 'completed') {
+        const { error: restoreError } = await restoreInventoryForOrder(order.order_id);
+        if (restoreError) {
+          throw new Error('在庫復元に失敗しました: ' + restoreError.message);
+        }
+      }
+
+      // 受注明細を削除（外部キー制約があるため先に削除）
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', order.order_id);
+
+      if (itemsError) throw itemsError;
+
+      // 受注を削除
+      const { error: orderError } = await supabase
+        .from('orders')
+        .delete()
+        .eq('order_id', order.order_id);
+
+      if (orderError) throw orderError;
+
+      await fetchOrders();
+      toast.success('受注を削除しました');
+    } catch (error: unknown) {
+      console.error('削除エラー:', error);
+      toast.error(`削除に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
       pending: { label: '受注', className: 'bg-yellow-100 text-yellow-800' },
@@ -489,6 +530,12 @@ export default function OrdersPage() {
                       納品完了
                     </button>
                   )}
+                  <button
+                    onClick={() => handleDeleteOrder(order)}
+                    className="text-red-600 hover:text-red-800 text-sm"
+                  >
+                    削除
+                  </button>
                 </td>
               </tr>
             ))}
