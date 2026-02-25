@@ -60,7 +60,7 @@ export async function handleSlackMessage({
       messages: [
         {
           role: 'user',
-          content: `SlackユーザーID: ${userSlackId}\nメッセージ: ${text}`,
+          content: `プラットフォーム: slack\nユーザーID: ${userSlackId}\nメッセージ: ${text}`,
         },
       ],
       tools: allTools,

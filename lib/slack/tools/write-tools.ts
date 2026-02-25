@@ -4,31 +4,52 @@ import { createServerClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
 
 /**
+ * プラットフォームに応じた作業者検索
+ */
+async function findWorkerByPlatformId(
+  supabase: ReturnType<typeof createServerClient>,
+  platform: 'slack' | 'discord',
+  platformUserId: string
+) {
+  const column = platform === 'slack' ? 'slack_user_id' : 'discord_user_id'
+
+  const { data: worker, error } = await supabase
+    .from('workers')
+    .select('worker_id, name')
+    .eq(column, platformUserId)
+    .eq('active', true)
+    .single()
+
+  return { worker, error }
+}
+
+/**
  * 作業セッションを開始するツール
  */
 export const startWorkSession = tool({
   description: '作業セッションを開始します。部品名と工程名を指定して作業を開始できます。',
   parameters: z.object({
-    workerSlackId: z.string().describe('SlackユーザーID'),
+    platform: z.enum(['slack', 'discord']).describe('プラットフォーム（slack または discord）'),
+    platformUserId: z.string().describe('プラットフォームのユーザーID'),
     partName: z.string().describe('部品名（例: 胴、棹、皮）'),
     operationName: z.string().describe('工程名（例: 塗装、仕上げ、検品）'),
   }),
-  execute: async ({ workerSlackId, partName, operationName }) => {
+  execute: async ({ platform, platformUserId, partName, operationName }) => {
     const supabase = createServerClient()
+    const platformLabel = platform === 'slack' ? 'Slack' : 'Discord'
 
     try {
       // 作業者を取得
-      const { data: worker, error: workerError } = await supabase
-        .from('workers')
-        .select('worker_id, name')
-        .eq('slack_user_id', workerSlackId)
-        .eq('active', true)
-        .single()
+      const { worker, error: workerError } = await findWorkerByPlatformId(
+        supabase,
+        platform,
+        platformUserId
+      )
 
       if (workerError || !worker) {
         return {
           success: false,
-          error: 'あなたのSlackアカウントは作業者として登録されていません。管理者に連絡してください。',
+          error: `あなたの${platformLabel}アカウントは作業者として登録されていません。管理者に連絡してください。`,
         }
       }
 
@@ -130,27 +151,28 @@ export const startWorkSession = tool({
 export const stopWorkSession = tool({
   description: '現在の作業セッションを停止して完了数を記録します。',
   parameters: z.object({
-    workerSlackId: z.string().describe('SlackユーザーID'),
+    platform: z.enum(['slack', 'discord']).describe('プラットフォーム（slack または discord）'),
+    platformUserId: z.string().describe('プラットフォームのユーザーID'),
     quantity: z.number().describe('完成数量'),
     lossQuantity: z.number().optional().describe('不良数（省略時は0）'),
     note: z.string().optional().describe('メモ'),
   }),
-  execute: async ({ workerSlackId, quantity, lossQuantity = 0, note }) => {
+  execute: async ({ platform, platformUserId, quantity, lossQuantity = 0, note }) => {
     const supabase = createServerClient()
+    const platformLabel = platform === 'slack' ? 'Slack' : 'Discord'
 
     try {
       // 作業者を取得
-      const { data: worker, error: workerError } = await supabase
-        .from('workers')
-        .select('worker_id, name')
-        .eq('slack_user_id', workerSlackId)
-        .eq('active', true)
-        .single()
+      const { worker, error: workerError } = await findWorkerByPlatformId(
+        supabase,
+        platform,
+        platformUserId
+      )
 
       if (workerError || !worker) {
         return {
           success: false,
-          error: 'あなたのSlackアカウントは作業者として登録されていません。',
+          error: `あなたの${platformLabel}アカウントは作業者として登録されていません。`,
         }
       }
 
@@ -266,7 +288,7 @@ export const updateOrderStatus = tool({
       // 受注を検索
       const { data: order, error: orderError } = await supabase
         .from('orders')
-        .select('order_id, order_number, customer_name, status')
+        .select('order_id, order_number, customer_name, status, note')
         .eq('order_number', orderNumber)
         .single()
 
