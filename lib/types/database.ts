@@ -19,6 +19,7 @@ export interface Database {
           auth_user_id: string | null
           email: string | null
           is_authenticated: boolean
+          slack_user_id: string | null
           created_at: string
           updated_at: string
         }
@@ -30,6 +31,7 @@ export interface Database {
           auth_user_id?: string | null
           email?: string | null
           is_authenticated?: boolean
+          slack_user_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -41,6 +43,7 @@ export interface Database {
           auth_user_id?: string | null
           email?: string | null
           is_authenticated?: boolean
+          slack_user_id?: string | null
           created_at?: string
           updated_at?: string
         }
